@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Track App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar for sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+
+    <div id="auth-container" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-lg shadow-lg">
+            <div>
+                <div class="flex justify-center text-red-500">
+                    <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                </div>
+                <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+                    Sign in to Heart Track
+                </h2>
+            </div>
+
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button id="login-tab-button"
+                        class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Login</button>
+                    <button id="signup-tab-button"
+                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Sign
+                        Up</button>
+                </nav>
+            </div>
+
+            <form id="login-form" class="mt-8 space-y-6" action="#" method="POST">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="login-email" class="sr-only">Email address</label>
+                        <input id="login-email" name="email" type="email" autocomplete="email" required
+                            class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Email address" value="user@example.com">
+                    </div>
+                    <div>
+                        <label for="login-password" class="sr-only">Password</label>
+                        <input id="login-password" name="password" type="password" autocomplete="current-password"
+                            required
+                            class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Password" value="password123">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" id="login-button"
+                        class="group relative flex w-full justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+
+            <form id="signup-form" class="mt-8 space-y-6 hidden" action="#" method="POST">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="signup-email" class="sr-only">Email address</label>
+                        <input id="signup-email" name="email" type="email" autocomplete="email" required
+                            class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Email address">
+                    </div>
+                    <div>
+                        <label for="signup-device-id" class="sr-only">Device ID</label>
+                        <input id="signup-device-id" name="device-id" type="text" required
+                            class="relative block w-full appearance-none border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Initial Device ID (e.g., A1B2C3)">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="sr-only">Password</label>
+                        <input id="signup-password" name="password" type="password" required
+                            class="relative block w-full appearance-none border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Password">
+                    </div>
+                    <div>
+                        <label for="signup-confirm-password" class="sr-only">Confirm Password</label>
+                        <input id="signup-confirm-password" name="confirm-password" type="password" required
+                            class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
+                            placeholder="Confirm Password">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" id="signup-button"
+                        class="group relative flex w-full justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        Sign Up
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div class="flex h-screen bg-gray-100">
+            <aside
+                class="w-64 flex-shrink-0 bg-gray-800 text-gray-300 flex flex-col p-4 sidebar-scroll overflow-y-auto">
+                <div class="flex items-center h-16 flex-shrink-0 px-4 mb-4">
+                    <svg class="w-10 h-10 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                    <span class="font-semibold text-2xl text-white ml-2">Heart Track</span>
+                </div>
+
+                <nav class="flex-grow space-y-2">
+                    <button data-view="dashboard-view"
+                        class="nav-button bg-gray-700 text-white flex items-center w-full px-4 py-3 rounded-lg font-medium">
+                        <span id="icon-dashboard"></span>
+                        <span class="ml-3">Dashboard</span>
+                    </button>
+                    <button data-view="devices-view"
+                        class="nav-button hover:bg-gray-700 hover:text-white flex items-center w-full px-4 py-3 rounded-lg font-medium">
+                        <span id="icon-device"></span>
+                        <span class="ml-3">Manage Devices</span>
+                    </button>
+                    <button data-view="settings-view"
+                        class="nav-button hover:bg-gray-700 hover:text-white flex items-center w-full px-4 py-3 rounded-lg font-medium">
+                        <span id="icon-settings"></span>
+                        <span class="ml-3">Settings</span>
+                    </button>
+                </nav>
+
+                <div class="mt-auto flex-shrink-0">
+                    <div class="flex items-center p-2">
+                        <img class="h-10 w-10 rounded-full" src="https://placehold.co/40x40/e2e8f0/64748b?text=U"
+                            alt="User avatar">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-white" id="user-name-display">Test User</p>
+                            <p class="text-xs text-gray-400" id="user-email-display">user@example.com</p>
+                        </div>
+                    </div>
+                    <button id="logout-button"
+                        class="flex items-center w-full mt-2 px-4 py-3 rounded-lg font-medium text-gray-300 hover:bg-gray-700 hover:text-white">
+                        <span id="icon-logout"></span>
+                        <span class="ml-3">Logout</span>
+                    </button>
+                </div>
+            </aside>
+
+            <main class="flex-1 overflow-y-auto p-6 md:p-10">
+                <div id="dashboard-view" class="main-view">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
+
+                    <div class="border-b border-gray-200 mb-6">
+                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button id="weekly-tab-button"
+                                class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Weekly
+                                Summary</button>
+                            <button id="daily-tab-button"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Daily
+                                Detail</button>
+                        </nav>
+                    </div>
+
+                    <div id="weekly-view-content">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Past 7 Days (Oct 22 - Oct 28, 2025)</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-6 rounded-lg shadow-lg">
+                                <h3 class="text-sm font-medium text-gray-500">Average Heart Rate</h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-avg-hr">72 <span
+                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow-lg">
+                                <h3 class="text-sm font-medium text-gray-500">Min Heart Rate</h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-min-hr">58 <span
+                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow-lg">
+                                <h3 class="text-sm font-medium text-gray-500">Max Heart Rate</h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-max-hr">110 <span
+                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="daily-view-content" class="hidden">
+                        <div class="flex items-center mb-4">
+                            <label for="daily-date-picker" class="text-xl font-semibold text-gray-700 mr-4">Select
+                                Day:</label>
+                            <input type="date" id="daily-date-picker" value="2025-10-28"
+                                class="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Heart Rate (bpm)</h3>
+                            <div class="flex space-x-4 text-sm mb-2">
+                                <div>Min: <span id="hr-min-text" class="font-bold text-blue-600">65 bpm</span></div>
+                                <div>Max: <span id="hr-max-text" class="font-bold text-red-600">92 bpm</span></div>
+                            </div>
+                            <canvas id="hrChart"></canvas>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Blood Oxygen (SpO2 %)</h3>
+                            <div class="flex space-x-4 text-sm mb-2">
+                                <div>Min: <span id="spo2-min-text" class="font-bold text-blue-600">96%</span></div>
+                                <div>Max: <span id="spo2-max-text" class="font-bold text-red-600">99%</span></div>
+                            </div>
+                            <canvas id="spo2Chart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="devices-view" class="main-view hidden">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Manage Devices</h1>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                        <h2 class="text-xl font-semibold mb-4">Add New Device</h2>
+                        <form id="add-device-form" class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1">
+                                <label for="device-name" class="block text-sm font-medium text-gray-700">Device
+                                    Name</label>
+                                <input type="text" id="device-name"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                    placeholder="e.g., Bedroom Monitor">
+                            </div>
+                            <div class="flex-1">
+                                <label for="device-id" class="block text-sm font-medium text-gray-700">Device ID</label>
+                                <input type="text" id="device-id"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                    placeholder="Find this ID on your device">
+                            </div>
+                            <div class="mt-1 md:mt-6">
+                                <button type="submit"
+                                    class="w-full md:w-auto justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Add
+                                    Device</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <h2 class="text-xl font-semibold p-6 border-b border-gray-200">Your Devices</h2>
+                        <ul id="device-list" class="divide-y divide-gray-200">
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="settings-view" class="main-view hidden max-w-4xl mx-auto">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                        <h2 class="text-xl font-semibold mb-4">Account Information</h2>
+                        <form id="account-settings-form" class="space-y-4">
+                            <div>
+                                <label for="account-name" class="block text-sm font-medium text-gray-700">Name</label>
+                                <input type="text" id="account-name"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="account-email" class="block text-sm font-medium text-gray-700">Email</label>
+                                <input type="email" id="account-email" disabled
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
+                                    title="Email cannot be changed.">
+                            </div>
+                            <div>
+                                <label for="account-password" class="block text-sm font-medium text-gray-700">New
+                                    Password</label>
+                                <input type="password" id="account-password"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                    placeholder="Leave blank to keep unchanged">
+                            </div>
+                            <div class="text-right">
+                                <button type="submit"
+                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Save
+                                    Account</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Measurement Configuration</h2>
+                        <form id="measurement-settings-form" class="space-y-4">
+                            <div>
+                                <label for="measurement-frequency"
+                                    class="block text-sm font-medium text-gray-700">Measurement Frequency</label>
+                                <select id="measurement-frequency"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                    <option value="15">Every 15 minutes</option>
+                                    <option value="30" selected>Every 30 minutes</option>
+                                    <option value="60">Every 1 hour</option>
+                                    <option value="120">Every 2 hours</option>
+                                </select>
+                            </div>
+                            <div classs="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="measurement-start"
+                                        class="block text-sm font-medium text-gray-700">Time-of-Day Range
+                                        (Start)</label>
+                                    <input type="time" id="measurement-start" value="08:00"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                </div>
+                                <div>
+                                    <label for="measurement-end"
+                                        class="block text-sm font-medium text-gray-700">Time-of-Day Range (End)</label>
+                                    <input type="time" id="measurement-end" value="22:00"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <button type="submit"
+                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Save
+                                    Configuration</button>
+
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js" type="module"></script>
+
+</body>
+
+</html>
