@@ -25,6 +25,12 @@
             background-color: #9ca3af;
             border-radius: 20px;
         }
+        
+        /* Custom class for invalid input */
+        .input-error {
+            border-color: #ef4444 !important; /* red-500 */
+            z-index: 10;
+        }
     </style>
 </head>
 
@@ -41,8 +47,11 @@
                     </svg>
                 </div>
                 <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-                    Sign in to Heart Track
+                    Login to Heart Track
                 </h2>
+                <p class="mt-2 text-center text-sm text-gray-500">
+                    Or sign up if you don't have an account.
+                </p>
             </div>
 
             <div class="border-b border-gray-200">
@@ -55,31 +64,33 @@
                 </nav>
             </div>
 
-            <form id="login-form" class="mt-8 space-y-6" action="#" method="POST">
+            <form id="login-form" class="mt-8 space-y-6" action="#" method="POST" novalidate>
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div>
                         <label for="login-email" class="sr-only">Email address</label>
                         <input id="login-email" name="email" type="email" autocomplete="email" required
                             class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Email address" value="user@example.com">
+                            placeholder="Email address">
                     </div>
                     <div>
                         <label for="login-password" class="sr-only">Password</label>
                         <input id="login-password" name="password" type="password" autocomplete="current-password"
                             required
                             class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Password" value="password123">
+                            placeholder="Password">
                     </div>
                 </div>
+                <p id="login-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
+                
                 <div>
                     <button type="submit" id="login-button"
                         class="group relative flex w-full justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                        Sign In
+                        Login
                     </button>
                 </div>
             </form>
 
-            <form id="signup-form" class="mt-8 space-y-6 hidden" action="#" method="POST">
+            <form id="signup-form" class="mt-8 space-y-6 hidden" action="#" method="POST" novalidate>
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div>
                         <label for="signup-email" class="sr-only">Email address</label>
@@ -87,12 +98,14 @@
                             class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
                             placeholder="Email address">
                     </div>
+                    
                     <div>
-                        <label for="signup-device-id" class="sr-only">Device ID</label>
+                        <label for="signup-device-id" class="sr-only">Initial Device ID</label>
                         <input id="signup-device-id" name="device-id" type="text" required
                             class="relative block w-full appearance-none border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
                             placeholder="Initial Device ID (e.g., A1B2C3)">
                     </div>
+                    
                     <div>
                         <label for="signup-password" class="sr-only">Password</label>
                         <input id="signup-password" name="password" type="password" required
@@ -106,6 +119,11 @@
                             placeholder="Confirm Password">
                     </div>
                 </div>
+                
+                <p id="signup-email-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
+                <p id="signup-password-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
+                <p id="signup-confirm-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
+
                 <div>
                     <button type="submit" id="signup-button"
                         class="group relative flex w-full justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
@@ -117,7 +135,7 @@
     </div>
 
     <div id="app-container" class="hidden">
-        <div class="flex h-screen bg-gray-100">
+      <div class="flex h-screen bg-gray-100">
             <aside
                 class="w-64 flex-shrink-0 bg-gray-800 text-gray-300 flex flex-col p-4 sidebar-scroll overflow-y-auto">
                 <div class="flex items-center h-16 flex-shrink-0 px-4 mb-4">
@@ -268,7 +286,7 @@
 
                     <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
                         <h2 class="text-xl font-semibold mb-4">Account Information</h2>
-                        <form id="account-settings-form" class="space-y-4">
+                        <form id="account-settings-form" class="space-y-4" novalidate>
                             <div>
                                 <label for="account-name" class="block text-sm font-medium text-gray-700">Name</label>
                                 <input type="text" id="account-name"
@@ -286,6 +304,14 @@
                                 <input type="password" id="account-password"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
                                     placeholder="Leave blank to keep unchanged">
+                            </div>
+                            
+                            <div>
+                                <label for="account-confirm-password" class="block text-sm font-medium text-gray-700">Confirm New
+                                    Password</label>
+                                <input type="password" id="account-confirm-password"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                    placeholder="Confirm new password">
                             </div>
                             <div class="text-right">
                                 <button type="submit"
@@ -336,9 +362,8 @@
             </main>
         </div>
     </div>
-
-    <script src="app.js" type="module"></script>
+    
+    <script src="javascripts/app.js" type="module"></script>
 
 </body>
-
 </html>
