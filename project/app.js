@@ -1,12 +1,15 @@
 // 1. IMPORTS
-require("dotenv").config(); // Loads environment variables from .env file
+// Env file
+require("dotenv").config();
+
+// Packages
 const express = require("express");
 const path = require("path");
 const morgan = require("morgan");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-// --- Import Route Files ---
+// Route files
 const authRoutes = require("./routes/auth");
 const accountRoutes = require("./routes/account");
 const measurementRoutes = require("./routes/measurements");
@@ -28,11 +31,10 @@ app.use(morgan("dev")); // Logger for incoming requests
 app.use(express.json()); // Parse JSON request bodies
 
 // 5. STATIC FILE SERVER
-// Serve your frontend (app.html, app.js, index.html, etc.)
 app.use(express.static(path.join(__dirname, "public")));
 
 // 6. API ROUTES
-// Connect your route files to specific URL paths
+// Connect route files to specific URL paths
 app.use("/api/auth", authRoutes);
 app.use("/api/account", accountRoutes);
 app.use("/api/measurements", measurementRoutes);
@@ -47,7 +49,6 @@ app.get("*", (req, res, next) => {
 });
 
 // 8. ERROR HANDLER
-// A simple JSON-based error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
