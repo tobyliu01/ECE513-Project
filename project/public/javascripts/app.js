@@ -146,7 +146,7 @@ const measurementSettingsForm = document.getElementById(
 const accountPassword = document.getElementById("account-password");
 const accountConfirmPassword = document.getElementById(
   "account-confirm-password"
-); // <-- ADDED
+);
 
 // --- LUCIDE ICONS ---
 const createIcon = (name, size = 20) => {
@@ -284,7 +284,26 @@ document.addEventListener("DOMContentLoaded", () => {
   weeklyTabButton.addEventListener("click", () => switchDashboardTab("weekly"));
   dailyTabButton.addEventListener("click", () => switchDashboardTab("daily"));
   addDeviceForm.addEventListener("submit", handleAddDevice);
-  deviceList.addEventListener("click", handleRemoveDevice);
+
+  // ##### MODIFIED: Updated device list listener #####
+  deviceList.addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button) return; // Didn't click a button
+
+    const id = button.dataset.id;
+
+    if (button.classList.contains("remove-device-btn")) {
+      handleRemoveDevice(id);
+    } else if (button.classList.contains("edit-device-btn")) {
+      toggleEditMode(id, true);
+    } else if (button.classList.contains("save-device-btn")) {
+      handleSaveDevice(id);
+    } else if (button.classList.contains("cancel-edit-btn")) {
+      toggleEditMode(id, false);
+    }
+  });
+  // #############################################
+
   accountSettingsForm.addEventListener("submit", handleSaveAccount);
   measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
 });
@@ -579,6 +598,8 @@ function initCharts(user) {
 }
 
 // --- DEVICE FUNCTIONS (Using local object) ---
+
+// ##### MODIFIED: Updated render function #####
 function renderDeviceList() {
   deviceList.innerHTML = "";
   if (currentUser.devices.length === 0) {
@@ -588,16 +609,26 @@ function renderDeviceList() {
   currentUser.devices.forEach((device) => {
     const li = document.createElement("li");
     li.className = "px-6 py-4 flex items-center justify-between";
+
+    // Create element content with placeholders
     li.innerHTML = `
-      <div class="flex items-center">
+      <div class="flex items-center flex-grow">
           <span id="icon-dev-${device.id}" class="text-gray-500"></span>
           <div class="ml-3">
-              <p class="text-sm font-medium text-gray-900">${device.name}</p>
+              <p id="device-name-${device.id}" class="text-sm font-medium text-gray-900">${device.name}</p>
+              <input id="device-edit-input-${device.id}" type="text" value="${device.name}" class="text-sm border-gray-300 rounded-md shadow-sm hidden w-3/4">
               <p class="text-sm text-gray-500">${device.id}</p>
           </div>
       </div>
-      <button data-id="${device.id}" class="remove-device-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Remove</button>
+      <div class="flex-shrink-0 space-x-2">
+          <button data-id="${device.id}" class="edit-device-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Edit</button>
+          <button data-id="${device.id}" class="remove-device-btn rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Remove</button>
+          
+          <button data-id="${device.id}" class="save-device-btn rounded-md bg-green-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hidden">Save</button>
+          <button data-id="${device.id}" class="cancel-edit-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hidden">Cancel</button>
+      </div>
     `;
+
     deviceList.appendChild(li);
     document
       .getElementById(`icon-dev-${device.id}`)
@@ -605,6 +636,7 @@ function renderDeviceList() {
   });
 }
 
+// ##### MODIFIED: Added duplicate name check #####
 async function handleAddDevice(e) {
   e.preventDefault();
   const nameInput = document.getElementById("device-name");
@@ -613,9 +645,19 @@ async function handleAddDevice(e) {
   const deviceId = idInput.value;
 
   if (name && deviceId) {
-    // Check if device ID is unique *for this user*
+    // Check if device ID is unique
     if (currentUser.devices.find((d) => d.id === deviceId)) {
       alert("Error: You have already registered a device with this ID.");
+      return;
+    }
+
+    // Check if device name is unique
+    if (
+      currentUser.devices.find(
+        (d) => d.name.toLowerCase() === name.toLowerCase()
+      )
+    ) {
+      alert("Error: A device with this name already exists.");
       return;
     }
 
@@ -627,18 +669,83 @@ async function handleAddDevice(e) {
   }
 }
 
-async function handleRemoveDevice(e) {
-  if (e.target.classList.contains("remove-device-btn")) {
-    const id = e.target.getAttribute("data-id");
-    if (!confirm("Are you sure you want to remove this device?")) {
-      return;
-    }
+// ##### MODIFIED: handleRemoveDevice now just takes the id #####
+async function handleRemoveDevice(id) {
+  if (!confirm("Are you sure you want to remove this device?")) {
+    return;
+  }
 
-    currentUser.devices = currentUser.devices.filter(
-      (device) => device.id !== id
-    );
-    saveDatabase(); // Save to localStorage
-    renderDeviceList();
+  currentUser.devices = currentUser.devices.filter(
+    (device) => device.id !== id
+  );
+  saveDatabase(); // Save to localStorage
+  renderDeviceList();
+}
+
+// --- NEW FUNCTIONS for editing device names ---
+
+function toggleEditMode(id, isEditing) {
+  // Get all elements for this device row
+  const nameEl = document.getElementById(`device-name-${id}`);
+  const inputEl = document.getElementById(`device-edit-input-${id}`);
+
+  // Find buttons within the list item
+  const li = nameEl.closest("li");
+  const editBtn = li.querySelector(".edit-device-btn");
+  const removeBtn = li.querySelector(".remove-device-btn");
+  const saveBtn = li.querySelector(".save-device-btn");
+  const cancelBtn = li.querySelector(".cancel-edit-btn");
+
+  if (isEditing) {
+    // Show edit state
+    nameEl.classList.add("hidden");
+    editBtn.classList.add("hidden");
+    removeBtn.classList.add("hidden");
+
+    inputEl.classList.remove("hidden");
+    saveBtn.classList.remove("hidden");
+    cancelBtn.classList.remove("hidden");
+  } else {
+    // Show view state
+    nameEl.classList.remove("hidden");
+    editBtn.classList.remove("hidden");
+    removeBtn.classList.remove("hidden");
+
+    inputEl.classList.add("hidden");
+    saveBtn.classList.add("hidden");
+    cancelBtn.classList.add("hidden");
+
+    // Reset input value to original name
+    inputEl.value = nameEl.textContent;
+  }
+}
+
+function handleSaveDevice(id) {
+  const inputEl = document.getElementById(`device-edit-input-${id}`);
+  const newName = inputEl.value;
+
+  // Check for empty name
+  if (!newName.trim()) {
+    alert("Error: Device name cannot be empty.");
+    return;
+  }
+
+  // Check for duplicate name
+  const isDuplicate = currentUser.devices.find(
+    (d) => d.name.toLowerCase() === newName.toLowerCase() && d.id !== id
+  );
+
+  if (isDuplicate) {
+    alert("Error: A device with this name already exists.");
+    return;
+  }
+
+  // Find and update the device in our local db
+  const deviceIndex = currentUser.devices.findIndex((d) => d.id === id);
+  if (deviceIndex > -1) {
+    currentUser.devices[deviceIndex].name = newName;
+    saveDatabase();
+    renderDeviceList(); // Re-render the whole list
   }
 }
 
@@ -654,7 +761,7 @@ function loadSettingsForms(user, email) {
   document.getElementById("measurement-end").value = user.settings.endTime;
 }
 
-// ##### MODIFICATION HERE #####
+// ##### MODIFIED: Added password confirmation check #####
 async function handleSaveAccount(e) {
   e.preventDefault();
   const newName = document.getElementById("account-name").value;
@@ -664,22 +771,18 @@ async function handleSaveAccount(e) {
   currentUser.name = newName;
   document.getElementById("user-name-display").textContent = newName;
 
-  if (confirmNewPassword && !newPassword) {
-    alert(`Enter new password!`);
-    return;
-  }
-
+  // Only validate and save password if user entered one
   if (newPassword) {
+    // Check if passwords match
+    if (newPassword !== confirmNewPassword) {
+      alert("Error: New passwords do not match.");
+      return;
+    }
+
     // Check strength
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
       alert(`Invalid new password: ${validation.message}`);
-      return;
-    }
-
-    // Check if passwords match
-    if (newPassword !== confirmNewPassword) {
-      alert("Error: New passwords do not match.");
       return;
     }
 
@@ -688,6 +791,10 @@ async function handleSaveAccount(e) {
     const hash = await hashPassword(newPassword, salt);
     currentUser.hash = hash;
     currentUser.salt = salt;
+  } else if (confirmNewPassword) {
+    // User typed in confirm but not new password
+    alert("Error: Please enter a new password.");
+    return;
   }
 
   saveDatabase(); // Save to localStorage
@@ -697,7 +804,6 @@ async function handleSaveAccount(e) {
   accountPassword.value = "";
   accountConfirmPassword.value = "";
 }
-// ###########################
 
 async function handleSaveMeasurements(e) {
   e.preventDefault();

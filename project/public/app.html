@@ -2,18 +2,18 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Heart Track App</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: "Inter", sans-serif;
         }
 
         /* Custom scrollbar for sidebar */
@@ -25,17 +25,17 @@
             background-color: #9ca3af;
             border-radius: 20px;
         }
-        
+
         /* Custom class for invalid input */
         .input-error {
-            border-color: #ef4444 !important; /* red-500 */
+            border-color: #ef4444 !important;
+            /* red-500 */
             z-index: 10;
         }
     </style>
 </head>
 
 <body class="bg-gray-100">
-
     <div id="auth-container" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-lg shadow-lg">
             <div>
@@ -57,10 +57,13 @@
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     <button id="login-tab-button"
-                        class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Login</button>
+                        class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Login
+                    </button>
                     <button id="signup-tab-button"
-                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Sign
-                        Up</button>
+                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Sign Up
+                    </button>
                 </nav>
             </div>
 
@@ -70,18 +73,20 @@
                         <label for="login-email" class="sr-only">Email address</label>
                         <input id="login-email" name="email" type="email" autocomplete="email" required
                             class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Email address">
+                            placeholder="Email address" />
                     </div>
                     <div>
                         <label for="login-password" class="sr-only">Password</label>
                         <input id="login-password" name="password" type="password" autocomplete="current-password"
                             required
                             class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Password">
+                            placeholder="Password" />
                     </div>
                 </div>
-                <p id="login-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
-                
+                <p id="login-error" class="text-xs text-red-600 mt-2 hidden">
+                    Error message here
+                </p>
+
                 <div>
                     <button type="submit" id="login-button"
                         class="group relative flex w-full justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
@@ -96,33 +101,39 @@
                         <label for="signup-email" class="sr-only">Email address</label>
                         <input id="signup-email" name="email" type="email" autocomplete="email" required
                             class="relative block w-full appearance-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Email address">
+                            placeholder="Email address" />
                     </div>
-                    
+
                     <div>
                         <label for="signup-device-id" class="sr-only">Initial Device ID</label>
                         <input id="signup-device-id" name="device-id" type="text" required
                             class="relative block w-full appearance-none border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Initial Device ID (e.g., A1B2C3)">
+                            placeholder="Initial Device ID (e.g., A1B2C3)" />
                     </div>
-                    
+
                     <div>
                         <label for="signup-password" class="sr-only">Password</label>
                         <input id="signup-password" name="password" type="password" required
                             class="relative block w-full appearance-none border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Password">
+                            placeholder="Password" />
                     </div>
                     <div>
                         <label for="signup-confirm-password" class="sr-only">Confirm Password</label>
                         <input id="signup-confirm-password" name="confirm-password" type="password" required
                             class="relative block w-full appearance-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm"
-                            placeholder="Confirm Password">
+                            placeholder="Confirm Password" />
                     </div>
                 </div>
-                
-                <p id="signup-email-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
-                <p id="signup-password-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
-                <p id="signup-confirm-error" class="text-xs text-red-600 mt-2 hidden">Error message here</p>
+
+                <p id="signup-email-error" class="text-xs text-red-600 mt-2 hidden">
+                    Error message here
+                </p>
+                <p id="signup-password-error" class="text-xs text-red-600 mt-2 hidden">
+                    Error message here
+                </p>
+                <p id="signup-confirm-error" class="text-xs text-red-600 mt-2 hidden">
+                    Error message here
+                </p>
 
                 <div>
                     <button type="submit" id="signup-button"
@@ -135,7 +146,7 @@
     </div>
 
     <div id="app-container" class="hidden">
-      <div class="flex h-screen bg-gray-100">
+        <div class="flex h-screen bg-gray-100">
             <aside
                 class="w-64 flex-shrink-0 bg-gray-800 text-gray-300 flex flex-col p-4 sidebar-scroll overflow-y-auto">
                 <div class="flex items-center h-16 flex-shrink-0 px-4 mb-4">
@@ -168,10 +179,14 @@
                 <div class="mt-auto flex-shrink-0">
                     <div class="flex items-center p-2">
                         <img class="h-10 w-10 rounded-full" src="https://placehold.co/40x40/e2e8f0/64748b?text=U"
-                            alt="User avatar">
+                            alt="User avatar" />
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-white" id="user-name-display">Test User</p>
-                            <p class="text-xs text-gray-400" id="user-email-display">user@example.com</p>
+                            <p class="text-sm font-medium text-white" id="user-name-display">
+                                Test User
+                            </p>
+                            <p class="text-xs text-gray-400" id="user-email-display">
+                                user@example.com
+                            </p>
                         </div>
                     </div>
                     <button id="logout-button"
@@ -189,31 +204,47 @@
                     <div class="border-b border-gray-200 mb-6">
                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                             <button id="weekly-tab-button"
-                                class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Weekly
-                                Summary</button>
+                                class="border-red-500 text-red-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                                Weekly Summary
+                            </button>
                             <button id="daily-tab-button"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Daily
-                                Detail</button>
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                                Daily Detail
+                            </button>
                         </nav>
                     </div>
 
                     <div id="weekly-view-content">
-                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Past 7 Days (Oct 22 - Oct 28, 2025)</h2>
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">
+                            Past 7 Days (Oct 22 - Oct 28, 2025)
+                        </h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-sm font-medium text-gray-500">Average Heart Rate</h3>
-                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-avg-hr">72 <span
-                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    Average Heart Rate
+                                </h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-avg-hr">
+                                    72
+                                    <span class="text-lg font-medium text-gray-600">bpm</span>
+                                </p>
                             </div>
                             <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-sm font-medium text-gray-500">Min Heart Rate</h3>
-                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-min-hr">58 <span
-                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    Min Heart Rate
+                                </h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-min-hr">
+                                    58
+                                    <span class="text-lg font-medium text-gray-600">bpm</span>
+                                </p>
                             </div>
                             <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-sm font-medium text-gray-500">Max Heart Rate</h3>
-                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-max-hr">110 <span
-                                        class="text-lg font-medium text-gray-600">bpm</span></p>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    Max Heart Rate
+                                </h3>
+                                <p class="mt-1 text-4xl font-semibold text-gray-900" id="weekly-max-hr">
+                                    110
+                                    <span class="text-lg font-medium text-gray-600">bpm</span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -223,32 +254,49 @@
                             <label for="daily-date-picker" class="text-xl font-semibold text-gray-700 mr-4">Select
                                 Day:</label>
                             <input type="date" id="daily-date-picker" value="2025-10-28"
-                                class="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                                class="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" />
                         </div>
 
                         <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Heart Rate (bpm)</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                                Heart Rate (bpm)
+                            </h3>
                             <div class="flex space-x-4 text-sm mb-2">
-                                <div>Min: <span id="hr-min-text" class="font-bold text-blue-600">65 bpm</span></div>
-                                <div>Max: <span id="hr-max-text" class="font-bold text-red-600">92 bpm</span></div>
+                                <div>
+                                    Min:
+                                    <span id="hr-min-text" class="font-bold text-blue-600">65 bpm</span>
+                                </div>
+                                <div>
+                                    Max:
+                                    <span id="hr-max-text" class="font-bold text-red-600">92 bpm</span>
+                                </div>
                             </div>
                             <canvas id="hrChart"></canvas>
                         </div>
 
                         <div class="bg-white p-6 rounded-lg shadow-lg">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Blood Oxygen (SpO2 %)</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                                Blood Oxygen (SpO2 %)
+                            </h3>
                             <div class="flex space-x-4 text-sm mb-2">
-                                <div>Min: <span id="spo2-min-text" class="font-bold text-blue-600">96%</span></div>
-                                <div>Max: <span id="spo2-max-text" class="font-bold text-red-600">99%</span></div>
+                                <div>
+                                    Min:
+                                    <span id="spo2-min-text" class="font-bold text-blue-600">96%</span>
+                                </div>
+                                <div>
+                                    Max:
+                                    <span id="spo2-max-text" class="font-bold text-red-600">99%</span>
+                                </div>
                             </div>
                             <canvas id="spo2Chart"></canvas>
                         </div>
                     </div>
-
                 </div>
 
                 <div id="devices-view" class="main-view hidden">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Manage Devices</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">
+                        Manage Devices
+                    </h1>
 
                     <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
                         <h2 class="text-xl font-semibold mb-4">Add New Device</h2>
@@ -258,29 +306,30 @@
                                     Name</label>
                                 <input type="text" id="device-name"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                    placeholder="e.g., Bedroom Monitor">
+                                    placeholder="e.g., Bedroom Monitor" required />
                             </div>
                             <div class="flex-1">
                                 <label for="device-id" class="block text-sm font-medium text-gray-700">Device ID</label>
                                 <input type="text" id="device-id"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                    placeholder="Find this ID on your device">
+                                    placeholder="Find this ID on your device" required />
                             </div>
                             <div class="mt-1 md:mt-6">
                                 <button type="submit"
-                                    class="w-full md:w-auto justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Add
-                                    Device</button>
+                                    class="w-full md:w-auto justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                    Add Device
+                                </button>
                             </div>
                         </form>
                     </div>
 
                     <div class="bg-white rounded-lg shadow-lg">
-                        <h2 class="text-xl font-semibold p-6 border-b border-gray-200">Your Devices</h2>
-                        <ul id="device-list" class="divide-y divide-gray-200">
-                        </ul>
+                        <h2 class="text-xl font-semibold p-6 border-b border-gray-200">
+                            Your Devices
+                        </h2>
+                        <ul id="device-list" class="divide-y divide-gray-200"></ul>
                     </div>
                 </div>
-
                 <div id="settings-view" class="main-view hidden max-w-4xl mx-auto">
                     <h1 class="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
 
@@ -290,39 +339,42 @@
                             <div>
                                 <label for="account-name" class="block text-sm font-medium text-gray-700">Name</label>
                                 <input type="text" id="account-name"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
                             </div>
                             <div>
                                 <label for="account-email" class="block text-sm font-medium text-gray-700">Email</label>
                                 <input type="email" id="account-email" disabled
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 sm:text-sm"
-                                    title="Email cannot be changed.">
+                                    title="Email cannot be changed." />
                             </div>
                             <div>
                                 <label for="account-password" class="block text-sm font-medium text-gray-700">New
                                     Password</label>
                                 <input type="password" id="account-password"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                    placeholder="Leave blank to keep unchanged">
+                                    placeholder="Leave blank to keep unchanged" />
                             </div>
-                            
+
                             <div>
-                                <label for="account-confirm-password" class="block text-sm font-medium text-gray-700">Confirm New
-                                    Password</label>
+                                <label for="account-confirm-password"
+                                    class="block text-sm font-medium text-gray-700">Confirm New Password</label>
                                 <input type="password" id="account-confirm-password"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                    placeholder="Confirm new password">
+                                    placeholder="Confirm new password" />
                             </div>
                             <div class="text-right">
                                 <button type="submit"
-                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Save
-                                    Account</button>
+                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                    Save Account
+                                </button>
                             </div>
                         </form>
                     </div>
 
                     <div class="bg-white p-6 rounded-lg shadow-lg">
-                        <h2 class="text-xl font-semibold mb-4">Measurement Configuration</h2>
+                        <h2 class="text-xl font-semibold mb-4">
+                            Measurement Configuration
+                        </h2>
                         <form id="measurement-settings-form" class="space-y-4">
                             <div>
                                 <label for="measurement-frequency"
@@ -341,20 +393,20 @@
                                         class="block text-sm font-medium text-gray-700">Time-of-Day Range
                                         (Start)</label>
                                     <input type="time" id="measurement-start" value="08:00"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
                                 </div>
                                 <div>
                                     <label for="measurement-end"
                                         class="block text-sm font-medium text-gray-700">Time-of-Day Range (End)</label>
                                     <input type="time" id="measurement-end" value="22:00"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
                                 </div>
                             </div>
                             <div class="text-right">
                                 <button type="submit"
-                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Save
-                                    Configuration</button>
-
+                                    class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                    Save Configuration
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -362,8 +414,8 @@
             </main>
         </div>
     </div>
-    
-    <script src="javascripts/app.js" type="module"></script>
 
+    <script src="javascripts/app.js" type="module"></script>
 </body>
+
 </html>
