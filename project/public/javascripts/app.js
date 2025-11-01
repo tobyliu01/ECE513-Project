@@ -1,12 +1,12 @@
-// --- CLIENT-SIDE DATABASE (Using localStorage) ---
+// --- MOCK LOCAL DATABASE ---
 const DB_KEY = "heartTrackDatabase";
 let db = {
-  users: {}, // This will hold all user accounts
+  users: {},
 };
-let currentUser = null; // This will hold the logged-in user's data
-let currentEmail = null; // This will hold the logged-in user's email (key)
+let currentUser = null; // Logged-in user's data
+let currentEmail = null; // Logged-in user's email
 
-// Load database from localStorage when the script starts
+// Load database from local storage
 function loadDatabase() {
   const storedDb = localStorage.getItem(DB_KEY);
   if (storedDb) {
@@ -17,20 +17,19 @@ function loadDatabase() {
   }
 }
 
-// Save the database to localStorage
+// Save the database to local storage
 function saveDatabase() {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
 }
 
-// --- PASSWORD HASHING (Using Web Crypto API) ---
-// Helper to convert ArrayBuffer to hex string
+// Convert ArrayBuffer to hex string
 function bytesToHex(bytes) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
     ""
   );
 }
 
-// Helper to convert hex string back to ArrayBuffer
+// Convert hex string to ArrayBuffer
 function hexToBytes(hex) {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -39,13 +38,13 @@ function hexToBytes(hex) {
   return bytes;
 }
 
-// Generates a random 16-byte salt
+// Generate a random 16-byte salt
 async function generateSalt() {
   const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  return bytesToHex(salt); // Store salt as a hex string
+  return bytesToHex(salt);
 }
 
-// Hashes a password with a given salt (as hex string)
+// Hashe a password with a given hex-format salt
 async function hashPassword(password, saltHex) {
   const salt = hexToBytes(saltHex);
   const encoder = new TextEncoder();
@@ -73,13 +72,13 @@ async function hashPassword(password, saltHex) {
   return bytesToHex(new Uint8Array(hashBuffer));
 }
 
-// Verifies a password against a stored salt and hash
+// Verify a password against a stored salt and hash
 async function verifyPassword(password, saltHex, hashHex) {
   const newHashHex = await hashPassword(password, saltHex);
   return newHashHex === hashHex;
 }
 
-// --- MOCK CHART DATA (Unchanged) ---
+// ------------------------- MOCK CHART DATA -------------------------
 const mockDailyData = {
   labels: [
     "08:00",
@@ -97,17 +96,17 @@ const mockDailyData = {
 };
 const mockWeeklyData = { avg: 76, min: 65, max: 92 };
 
-// --- CHART VARIABLES ---
+// Chart variables
 let hrChartInstance = null;
 let spo2ChartInstance = null;
 
-// --- DOM ELEMENTS ---
+// DOM elements
 const authContainer = document.getElementById("auth-container");
 const appContainer = document.getElementById("app-container");
 const mainViews = document.querySelectorAll(".main-view");
 const navButtons = document.querySelectorAll(".nav-button");
 
-// Auth elements
+// Authentication elements
 const loginTabButton = document.getElementById("login-tab-button");
 const signupTabButton = document.getElementById("signup-tab-button");
 const loginForm = document.getElementById("login-form");
@@ -130,13 +129,17 @@ const signupEmailError = document.getElementById("signup-email-error");
 const signupPasswordError = document.getElementById("signup-password-error");
 const signupConfirmError = document.getElementById("signup-confirm-error");
 
-// (Rest of DOM elements are the same...)
+// Data view fields
 const weeklyTabButton = document.getElementById("weekly-tab-button");
 const dailyTabButton = document.getElementById("daily-tab-button");
 const weeklyViewContent = document.getElementById("weekly-view-content");
 const dailyViewContent = document.getElementById("daily-view-content");
+
+// Device list fields
 const deviceList = document.getElementById("device-list");
 const addDeviceForm = document.getElementById("add-device-form");
+
+// Account setting fields
 const accountSettingsForm = document.getElementById("account-settings-form");
 const measurementSettingsForm = document.getElementById(
   "measurement-settings-form"
@@ -148,7 +151,7 @@ const accountConfirmPassword = document.getElementById(
   "account-confirm-password"
 );
 
-// --- LUCIDE ICONS ---
+// Create and load LUCIDE icon
 const createIcon = (name, size = 20) => {
   const icon = lucide.icons[name];
   if (!icon) return null;
@@ -172,9 +175,8 @@ document.getElementById("icon-device").appendChild(createIcon("Smartphone"));
 document.getElementById("icon-settings").appendChild(createIcon("Settings"));
 document.getElementById("icon-logout").appendChild(createIcon("LogOut"));
 
-// --- VALIDATION & ERROR HELPERS ---
+// Set input error messages
 function setInputError(inputEl, errorEl, message) {
-  // Ensure errorEl exists before trying to set its textContent
   if (errorEl) {
     errorEl.textContent = message;
     errorEl.classList.remove("hidden");
@@ -182,8 +184,8 @@ function setInputError(inputEl, errorEl, message) {
   inputEl.classList.add("input-error");
 }
 
+// Clear input error messages
 function clearInputError(inputEl, errorEl) {
-  // Ensure errorEl exists
   if (errorEl) {
     errorEl.textContent = "";
     errorEl.classList.add("hidden");
@@ -191,124 +193,47 @@ function clearInputError(inputEl, errorEl) {
   inputEl.classList.remove("input-error");
 }
 
-// Added email validation function
+// Validate an email format
 function validateEmail(email) {
-  // Simple regex for email format
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(String(email).toLowerCase());
 }
 
+// Validate a password's format
 function validatePassword(password) {
+  // Length >= 8
   if (password.length < 8) {
     return {
       isValid: false,
       message: "Password must be at least 8 characters long.",
     };
   }
+
+  // Lowercase letter >= 1
   if (!/[a-z]/.test(password)) {
     return {
       isValid: false,
       message: "Must contain at least one lowercase letter.",
     };
   }
+
+  // Uppercase letter >= 1
   if (!/[A-Z]/.test(password)) {
     return {
       isValid: false,
       message: "Must contain at least one uppercase letter.",
     };
   }
+
+  // Number >= 1
   if (!/[0-9]/.test(password)) {
     return { isValid: false, message: "Must contain at least one number." };
   }
+
   return { isValid: true, message: "" };
 }
 
-// --- API HELPER (REMOVED) ---
-
-// --- INITIALIZATION ---
-document.addEventListener("DOMContentLoaded", () => {
-  // Load the database from localStorage
-  loadDatabase();
-
-  // Auth Listeners
-  loginTabButton.addEventListener("click", () => switchAuthTab("login"));
-  signupTabButton.addEventListener("click", () => switchAuthTab("signup"));
-  loginForm.addEventListener("submit", handleLogin);
-  signupForm.addEventListener("submit", handleSignup);
-  logoutButton.addEventListener("click", handleLogout);
-
-  // Real-time Validation Listeners
-  signupEmail.addEventListener("input", () => {
-    if (!validateEmail(signupEmail.value)) {
-      setInputError(
-        signupEmail,
-        signupEmailError,
-        "Please enter a valid email address."
-      );
-    } else {
-      clearInputError(signupEmail, signupEmailError);
-    }
-  });
-
-  signupPassword.addEventListener("input", () => {
-    const password = signupPassword.value;
-    const validation = validatePassword(password);
-    if (!validation.isValid) {
-      setInputError(signupPassword, signupPasswordError, validation.message);
-    } else {
-      clearInputError(signupPassword, signupPasswordError);
-    }
-  });
-
-  signupConfirmPassword.addEventListener("input", () => {
-    const password = signupPassword.value;
-    const confirmPassword = signupConfirmPassword.value;
-    if (password !== confirmPassword) {
-      setInputError(
-        signupConfirmPassword,
-        signupConfirmError,
-        "Passwords do not match."
-      );
-    } else {
-      clearInputError(signupConfirmPassword, signupConfirmError);
-    }
-  });
-
-  // (Rest of listeners are the same...)
-  navButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const viewId = button.getAttribute("data-view");
-      showView(viewId);
-    });
-  });
-  weeklyTabButton.addEventListener("click", () => switchDashboardTab("weekly"));
-  dailyTabButton.addEventListener("click", () => switchDashboardTab("daily"));
-  addDeviceForm.addEventListener("submit", handleAddDevice);
-
-  // ##### MODIFIED: Updated device list listener #####
-  deviceList.addEventListener("click", (e) => {
-    const button = e.target.closest("button");
-    if (!button) return; // Didn't click a button
-
-    const id = button.dataset.id;
-
-    if (button.classList.contains("remove-device-btn")) {
-      handleRemoveDevice(id);
-    } else if (button.classList.contains("edit-device-btn")) {
-      toggleEditMode(id, true);
-    } else if (button.classList.contains("save-device-btn")) {
-      handleSaveDevice(id);
-    } else if (button.classList.contains("cancel-edit-btn")) {
-      toggleEditMode(id, false);
-    }
-  });
-  // #############################################
-
-  accountSettingsForm.addEventListener("submit", handleSaveAccount);
-  measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
-});
-
-// --- AUTH FUNCTIONS (Using localStorage) ---
+// Switch between login and signup tabs
 function switchAuthTab(tab) {
   clearInputError(loginPassword, loginError);
   clearInputError(signupEmail, signupEmailError);
@@ -332,6 +257,7 @@ function switchAuthTab(tab) {
   }
 }
 
+// Handle login button
 async function handleLogin(e) {
   e.preventDefault();
   clearInputError(loginPassword, loginError);
@@ -339,14 +265,14 @@ async function handleLogin(e) {
   const email = loginEmail.value;
   const password = loginPassword.value;
 
-  // Req 6: Check if user exists
+  // Check if the user exists
   const user = db.users[email];
   if (!user) {
     alert("Error: No account found with this email.");
     return;
   }
 
-  // Req 7: Check password by verifying the hash
+  // Check password by verifying the hash
   const isValid = await verifyPassword(password, user.salt, user.hash);
   if (!isValid) {
     setInputError(
@@ -357,7 +283,6 @@ async function handleLogin(e) {
     return;
   }
 
-  // Login Success
   currentUser = user;
   currentEmail = email;
   authContainer.classList.add("hidden");
@@ -367,9 +292,9 @@ async function handleLogin(e) {
   initializeApp(user, email);
 }
 
+// Handle signup button
 async function handleSignup(e) {
   e.preventDefault();
-  // Clear all errors
   clearInputError(signupEmail, signupEmailError);
   clearInputError(signupPassword, signupPasswordError);
   clearInputError(signupConfirmPassword, signupConfirmError);
@@ -379,13 +304,13 @@ async function handleSignup(e) {
   const confirmPassword = signupConfirmPassword.value;
   const deviceId = signupDeviceId.value;
 
-  // --- NEW VALIDATION (Req 1) ---
+  // Validate all fields are filled
   if (!email || !password || !deviceId) {
     alert("Error: Please fill in all fields (Email, Device ID, and Password).");
     return;
   }
 
-  // --- NEW VALIDATION (Req 2) ---
+  // Validate email format
   if (!validateEmail(email)) {
     setInputError(
       signupEmail,
@@ -395,17 +320,20 @@ async function handleSignup(e) {
     return;
   }
 
-  // Req 4: Check if email exists
+  // Check if email exists
   if (db.users[email]) {
     alert("Error: This email is already registered. Please login.");
     return;
   }
 
+  // Validate password format
   const validation = validatePassword(password);
   if (!validation.isValid) {
     setInputError(signupPassword, signupPasswordError, validation.message);
     return;
   }
+
+  // Check if two passwords are matched
   if (password !== confirmPassword) {
     setInputError(
       signupConfirmPassword,
@@ -415,31 +343,26 @@ async function handleSignup(e) {
     return;
   }
 
-  // Req 5: Create new user with hashed password
+  // Create new user data structure
   const salt = await generateSalt();
   const hash = await hashPassword(password, salt);
-
   const newUser = {
     name: email.split("@")[0],
-    hash: hash, // Store the hash
-    salt: salt, // Store the salt
-    devices: [{ id: deviceId, name: "Initial Device" }], // Add the device
+    hash: hash,
+    salt: salt,
+    devices: [{ id: deviceId, name: "Initial Device" }],
     settings: {
       frequency: "30",
       startTime: "08:00",
       endTime: "22:00",
     },
-    // We will store measurements in the user object
     measurements: [],
   };
 
   db.users[email] = newUser;
   saveDatabase();
 
-  // Sign up success
   alert("Sign up successful! You are now logged in.");
-
-  // Log the user in
   currentUser = newUser;
   currentEmail = email;
   authContainer.classList.add("hidden");
@@ -449,6 +372,7 @@ async function handleSignup(e) {
   initializeApp(newUser, email);
 }
 
+// Handle logout button
 function handleLogout() {
   currentUser = null;
   currentEmail = null;
@@ -456,23 +380,26 @@ function handleLogout() {
   authContainer.classList.remove("hidden");
   appContainer.classList.add("hidden");
 
-  if (hrChartInstance) hrChartInstance.destroy();
-  if (spo2ChartInstance) spo2ChartInstance.destroy();
+  if (hrChartInstance) {
+    hrChartInstance.destroy();
+  }
+  if (spo2ChartInstance) {
+    spo2ChartInstance.destroy();
+  }
   hrChartInstance = null;
   spo2ChartInstance = null;
 }
 
-// --- APP INITIALIZATION ---
-// This function loads all user data from the logged-in user object
+// Initialize the app page
 function initializeApp(user, email) {
   showView("dashboard-view");
-  loadWeeklySummary(user); // Switched to user object
-  initCharts(user); // Switched to user object
-  renderDeviceList(); // Uses global currentUser
+  loadWeeklySummary(user);
+  initCharts(user);
+  renderDeviceList();
   loadSettingsForms(user, email);
 }
 
-// --- VIEW NAVIGATION ---
+// Show dashboard view
 function showView(viewId) {
   mainViews.forEach((view) => view.classList.add("hidden"));
   navButtons.forEach((button) => {
@@ -487,7 +414,7 @@ function showView(viewId) {
   activeButton.classList.remove("hover:bg-gray-700", "hover:text-white");
 }
 
-// --- DASHBOARD FUNCTIONS (Now uses local data) ---
+// Switch between weekly and daily dashboards
 function switchDashboardTab(tab) {
   if (tab === "weekly") {
     weeklyTabButton.className =
@@ -506,11 +433,10 @@ function switchDashboardTab(tab) {
   }
 }
 
+// Load user's weekly summary
 function loadWeeklySummary(user) {
-  // This will use mock data for now, as we have no measurements
-  // In a real version, we would calculate this from user.measurements
-
-  // TODO: Add logic to calculate this from user.measurements array
+  // CURRENTLY: USE MOCK DATA
+  // REAL VERSION: USE user.measurements
 
   const avg = Math.round(mockWeeklyData.avg || 0);
   const min = Math.round(mockWeeklyData.min || 0);
@@ -527,10 +453,10 @@ function loadWeeklySummary(user) {
   ).innerHTML = `${max} <span class="text-lg font-medium text-gray-600">bpm</span>`;
 }
 
+// Initialize the data chart
 function initCharts(user) {
-  // This will use mock data for now
-
-  // TODO: Add logic to pull data from user.measurements array
+  // CURRENTLY: USE MOCK DATA
+  // REAL VERSION: USE user.measurements
 
   if (hrChartInstance) hrChartInstance.destroy();
   if (spo2ChartInstance) spo2ChartInstance.destroy();
@@ -597,9 +523,7 @@ function initCharts(user) {
   });
 }
 
-// --- DEVICE FUNCTIONS (Using local object) ---
-
-// ##### MODIFIED: Updated render function #####
+// Render device list
 function renderDeviceList() {
   deviceList.innerHTML = "";
   if (currentUser.devices.length === 0) {
@@ -636,7 +560,7 @@ function renderDeviceList() {
   });
 }
 
-// ##### MODIFIED: Added duplicate name check #####
+// Handle button of adding a device
 async function handleAddDevice(e) {
   e.preventDefault();
   const nameInput = document.getElementById("device-name");
@@ -645,13 +569,13 @@ async function handleAddDevice(e) {
   const deviceId = idInput.value;
 
   if (name && deviceId) {
-    // Check if device ID is unique
+    // Check if device ID exists
     if (currentUser.devices.find((d) => d.id === deviceId)) {
       alert("Error: You have already registered a device with this ID.");
       return;
     }
 
-    // Check if device name is unique
+    // Check if device name exists
     if (
       currentUser.devices.find(
         (d) => d.name.toLowerCase() === name.toLowerCase()
@@ -662,14 +586,14 @@ async function handleAddDevice(e) {
     }
 
     currentUser.devices.push({ id: deviceId, name: name });
-    saveDatabase(); // Save to localStorage
+    saveDatabase();
     renderDeviceList();
     nameInput.value = "";
     idInput.value = "";
   }
 }
 
-// ##### MODIFIED: handleRemoveDevice now just takes the id #####
+// Handle button of deleting a device
 async function handleRemoveDevice(id) {
   if (!confirm("Are you sure you want to remove this device?")) {
     return;
@@ -678,12 +602,11 @@ async function handleRemoveDevice(id) {
   currentUser.devices = currentUser.devices.filter(
     (device) => device.id !== id
   );
-  saveDatabase(); // Save to localStorage
+  saveDatabase();
   renderDeviceList();
 }
 
-// --- NEW FUNCTIONS for editing device names ---
-
+// Handle button of editing a device information
 function toggleEditMode(id, isEditing) {
   // Get all elements for this device row
   const nameEl = document.getElementById(`device-name-${id}`);
@@ -720,36 +643,36 @@ function toggleEditMode(id, isEditing) {
   }
 }
 
+// Handle button of saving device information
 function handleSaveDevice(id) {
   const inputEl = document.getElementById(`device-edit-input-${id}`);
   const newName = inputEl.value;
 
-  // Check for empty name
+  // Check if the name is empty
   if (!newName.trim()) {
     alert("Error: Device name cannot be empty.");
     return;
   }
 
-  // Check for duplicate name
+  // Check if the name exists
   const isDuplicate = currentUser.devices.find(
     (d) => d.name.toLowerCase() === newName.toLowerCase() && d.id !== id
   );
-
   if (isDuplicate) {
     alert("Error: A device with this name already exists.");
     return;
   }
 
-  // Find and update the device in our local db
+  // Update the device information
   const deviceIndex = currentUser.devices.findIndex((d) => d.id === id);
   if (deviceIndex > -1) {
     currentUser.devices[deviceIndex].name = newName;
     saveDatabase();
-    renderDeviceList(); // Re-render the whole list
+    renderDeviceList();
   }
 }
 
-// --- SETTINGS FUNCTIONS (Using local object) ---
+// Load account settings forms
 function loadSettingsForms(user, email) {
   document.getElementById("user-name-display").textContent = user.name;
   document.getElementById("user-email-display").textContent = email;
@@ -761,7 +684,7 @@ function loadSettingsForms(user, email) {
   document.getElementById("measurement-end").value = user.settings.endTime;
 }
 
-// ##### MODIFIED: Added password confirmation check #####
+// Handle button of saving account profile
 async function handleSaveAccount(e) {
   e.preventDefault();
   const newName = document.getElementById("account-name").value;
@@ -773,13 +696,13 @@ async function handleSaveAccount(e) {
 
   // Only validate and save password if user entered one
   if (newPassword) {
-    // Check if passwords match
+    // Check if two passwords match
     if (newPassword !== confirmNewPassword) {
       alert("Error: New passwords do not match.");
       return;
     }
 
-    // Check strength
+    // Check new password's format
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
       alert(`Invalid new password: ${validation.message}`);
@@ -792,19 +715,19 @@ async function handleSaveAccount(e) {
     currentUser.hash = hash;
     currentUser.salt = salt;
   } else if (confirmNewPassword) {
-    // User typed in confirm but not new password
     alert("Error: Please enter a new password.");
     return;
   }
 
-  saveDatabase(); // Save to localStorage
+  saveDatabase();
   alert("Account details saved!");
 
-  // Clear both password fields
+  // Clear password fields
   accountPassword.value = "";
   accountConfirmPassword.value = "";
 }
 
+// Handle button of saving measurement settings
 async function handleSaveMeasurements(e) {
   e.preventDefault();
 
@@ -816,6 +739,86 @@ async function handleSaveMeasurements(e) {
   currentUser.settings.endTime =
     document.getElementById("measurement-end").value;
 
-  saveDatabase(); // Save to localStorage
+  saveDatabase();
   alert("Measurement settings saved!");
 }
+
+// MAIN LOGIC
+document.addEventListener("DOMContentLoaded", () => {
+  // Load the database from local storage
+  loadDatabase();
+
+  // Login/Signup page listeners
+  loginTabButton.addEventListener("click", () => switchAuthTab("login"));
+  signupTabButton.addEventListener("click", () => switchAuthTab("signup"));
+  loginForm.addEventListener("submit", handleLogin);
+  signupForm.addEventListener("submit", handleSignup);
+  logoutButton.addEventListener("click", handleLogout);
+
+  // Email/Password validation listeners
+  signupEmail.addEventListener("input", () => {
+    if (!validateEmail(signupEmail.value)) {
+      setInputError(
+        signupEmail,
+        signupEmailError,
+        "Please enter a valid email address."
+      );
+    } else {
+      clearInputError(signupEmail, signupEmailError);
+    }
+  });
+  signupPassword.addEventListener("input", () => {
+    const password = signupPassword.value;
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setInputError(signupPassword, signupPasswordError, validation.message);
+    } else {
+      clearInputError(signupPassword, signupPasswordError);
+    }
+  });
+  signupConfirmPassword.addEventListener("input", () => {
+    const password = signupPassword.value;
+    const confirmPassword = signupConfirmPassword.value;
+    if (password !== confirmPassword) {
+      setInputError(
+        signupConfirmPassword,
+        signupConfirmError,
+        "Passwords do not match."
+      );
+    } else {
+      clearInputError(signupConfirmPassword, signupConfirmError);
+    }
+  });
+
+  // Buttons' listeners on the app page
+  navButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const viewId = button.getAttribute("data-view");
+      showView(viewId);
+    });
+  });
+  weeklyTabButton.addEventListener("click", () => switchDashboardTab("weekly"));
+  dailyTabButton.addEventListener("click", () => switchDashboardTab("daily"));
+  addDeviceForm.addEventListener("submit", handleAddDevice);
+
+  // Updated device list listener
+  deviceList.addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button) return;
+
+    const id = button.dataset.id;
+
+    if (button.classList.contains("remove-device-btn")) {
+      handleRemoveDevice(id);
+    } else if (button.classList.contains("edit-device-btn")) {
+      toggleEditMode(id, true);
+    } else if (button.classList.contains("save-device-btn")) {
+      handleSaveDevice(id);
+    } else if (button.classList.contains("cancel-edit-btn")) {
+      toggleEditMode(id, false);
+    }
+  });
+
+  accountSettingsForm.addEventListener("submit", handleSaveAccount);
+  measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
+});
