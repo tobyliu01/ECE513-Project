@@ -1,82 +1,100 @@
-// --- MOCK LOCAL DATABASE ---
-const DB_KEY = "heartTrackDatabase";
-let db = {
-  users: {},
-};
-let currentUser = null; // Logged-in user's data
-let currentEmail = null; // Logged-in user's email
+const API_BASE_URL = "/api";
+const TOKEN_KEY = "heartTrackToken";
 
-// Load database from local storage
-function loadDatabase() {
-  const storedDb = localStorage.getItem(DB_KEY);
-  if (storedDb) {
-    db = JSON.parse(storedDb);
+let authToken = null;
+let currentUser = null;
+let currentDevices = [];
+let weeklyMetrics = { avg: 0, min: 0, max: 0 };
+let dailyMetrics = { labels: [], hr: [], spo2: [] };
+let selectedDate = new Date();
+
+const setAuthToken = (token) => {
+  authToken = token;
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    // If no DB, save the empty one
-    saveDatabase();
+    localStorage.removeItem(TOKEN_KEY);
   }
-}
+};
 
-// Save the database to local storage
-function saveDatabase() {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
-
-// Convert ArrayBuffer to hex string
-function bytesToHex(bytes) {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
-
-// Convert hex string to ArrayBuffer
-function hexToBytes(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+const apiRequest = async (
+  path,
+  { method = "GET", body, skipAuth = false } = {}
+) => {
+  const headers = { "Content-Type": "application/json" };
+  if (!skipAuth && authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
   }
-  return bytes;
-}
 
-// Generate a random 16-byte salt
-async function generateSalt() {
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  return bytesToHex(salt);
-}
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-// Hashe a password with a given hex-format salt
-async function hashPassword(password, saltHex) {
-  const salt = hexToBytes(saltHex);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
+  let payload = {};
+  try {
+    payload = await res.json();
+  } catch (err) {
+    // ignore JSON parse errors
+  }
 
-  const keyMaterial = await window.crypto.subtle.importKey(
-    "raw",
-    data,
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
+  if (!res.ok || payload.success === false) {
+    const error = new Error(payload.message || "Request failed");
+    error.status = res.status;
+    error.payload = payload;
+    throw error;
+  }
 
-  const hashBuffer = await window.crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    256
-  );
+  return payload;
+};
 
-  return bytesToHex(new Uint8Array(hashBuffer));
-}
+const mapUser = (raw) => ({
+  id: raw.id,
+  email: raw.email,
+  name: raw.name,
+  settings: {
+    frequency: raw.config?.frequency ?? 30,
+    startTime: raw.config?.startTime ?? "08:00",
+    endTime: raw.config?.endTime ?? "22:00",
+  },
+});
 
-// Verify a password against a stored salt and hash
-async function verifyPassword(password, saltHex, hashHex) {
-  const newHashHex = await hashPassword(password, saltHex);
-  return newHashHex === hashHex;
-}
+const mapDevice = (device) => ({
+  id: device.deviceId,
+  mongoId: device.mongoId || device._id,
+  name: device.name,
+});
+
+const resetAppState = () => {
+  currentUser = null;
+  currentDevices = [];
+  weeklyMetrics = { avg: 0, min: 0, max: 0 };
+  dailyMetrics = { labels: [], hr: [], spo2: [] };
+  selectedDate = new Date();
+};
+
+const bootstrapApp = async (seedUser) => {
+  const today = selectedDate.toISOString().split("T")[0];
+
+  const [userRes, deviceRes, weeklyRes, dailyRes] = await Promise.all([
+    seedUser ? Promise.resolve({ data: seedUser }) : apiRequest("/account/me"),
+    apiRequest("/account/devices"),
+    apiRequest("/measurements/weekly"),
+    apiRequest(`/measurements/daily?date=${today}`),
+  ]);
+
+  const userPayload = userRes.data || userRes.user || seedUser;
+  currentUser = mapUser(userPayload);
+  currentDevices = (deviceRes.data || []).map(mapDevice);
+  weeklyMetrics = weeklyRes.data || weeklyMetrics;
+  dailyMetrics = dailyRes.data || dailyMetrics;
+
+  authContainer.classList.add("hidden");
+  appContainer.classList.remove("hidden");
+
+  initializeApp();
+};
 
 // ------------------------- MOCK CHART DATA -------------------------
 const mockDailyData = {
@@ -95,6 +113,7 @@ const mockDailyData = {
   spo2: [98, 99, 98, 97, 96, 97, 98, 99, 98],
 };
 const mockWeeklyData = { avg: 76, min: 65, max: 92 };
+// -------------------------------------------------------------------
 
 // Chart variables
 let hrChartInstance = null;
@@ -262,34 +281,38 @@ async function handleLogin(e) {
   e.preventDefault();
   clearInputError(loginPassword, loginError);
 
-  const email = loginEmail.value;
+  const email = loginEmail.value.trim();
   const password = loginPassword.value;
 
-  // Check if the user exists
-  const user = db.users[email];
-  if (!user) {
-    alert("Error: No account found with this email.");
-    return;
-  }
-
-  // Check password by verifying the hash
-  const isValid = await verifyPassword(password, user.salt, user.hash);
-  if (!isValid) {
+  if (!email || !password) {
     setInputError(
       loginPassword,
       loginError,
-      "Incorrect password. Please try again."
+      "Please enter email and password."
     );
     return;
   }
 
-  currentUser = user;
-  currentEmail = email;
-  authContainer.classList.add("hidden");
-  appContainer.classList.remove("hidden");
+  try {
+    const response = await apiRequest("/auth/login", {
+      method: "POST",
+      body: { email, password },
+      skipAuth: true,
+    });
 
-  // Load the app with the logged-in user's data
-  initializeApp(user, email);
+    setAuthToken(response.token);
+    await bootstrapApp(response.user);
+  } catch (err) {
+    if (err.status === 404) {
+      alert(err.message || "No account found with this email.");
+      return;
+    }
+    setInputError(
+      loginPassword,
+      loginError,
+      err.message || "Login failed. Please try again."
+    );
+  }
 }
 
 // Handle signup button
@@ -299,18 +322,16 @@ async function handleSignup(e) {
   clearInputError(signupPassword, signupPasswordError);
   clearInputError(signupConfirmPassword, signupConfirmError);
 
-  const email = signupEmail.value;
+  const email = signupEmail.value.trim();
   const password = signupPassword.value;
   const confirmPassword = signupConfirmPassword.value;
-  const deviceId = signupDeviceId.value;
+  const deviceId = signupDeviceId.value.trim();
 
-  // Validate all fields are filled
   if (!email || !password || !deviceId) {
     alert("Error: Please fill in all fields (Email, Device ID, and Password).");
     return;
   }
 
-  // Validate email format
   if (!validateEmail(email)) {
     setInputError(
       signupEmail,
@@ -320,20 +341,12 @@ async function handleSignup(e) {
     return;
   }
 
-  // Check if email exists
-  if (db.users[email]) {
-    alert("Error: This email is already registered. Please login.");
-    return;
-  }
-
-  // Validate password format
   const validation = validatePassword(password);
   if (!validation.isValid) {
     setInputError(signupPassword, signupPasswordError, validation.message);
     return;
   }
 
-  // Check if two passwords are matched
   if (password !== confirmPassword) {
     setInputError(
       signupConfirmPassword,
@@ -343,60 +356,41 @@ async function handleSignup(e) {
     return;
   }
 
-  // Create new user data structure
-  const salt = await generateSalt();
-  const hash = await hashPassword(password, salt);
-  const newUser = {
-    name: email.split("@")[0],
-    hash: hash,
-    salt: salt,
-    devices: [{ id: deviceId, name: "Initial Device" }],
-    settings: {
-      frequency: "30",
-      startTime: "08:00",
-      endTime: "22:00",
-    },
-    measurements: [],
-  };
+  try {
+    const response = await apiRequest("/auth/register", {
+      method: "POST",
+      body: { email, password, deviceId },
+      skipAuth: true,
+    });
 
-  db.users[email] = newUser;
-  saveDatabase();
+    setAuthToken(response.token);
+    await bootstrapApp(response.user);
+    alert("Sign up successful! You are now logged in.");
+  } catch (err) {
+    if (err.status === 409) {
+      alert(err.message || "Account or device already exists.");
+      return;
+    }
 
-  alert("Sign up successful! You are now logged in.");
-  currentUser = newUser;
-  currentEmail = email;
-  authContainer.classList.add("hidden");
-  appContainer.classList.remove("hidden");
-
-  // Load the app with the new user's data
-  initializeApp(newUser, email);
+    alert(`Signup failed: ${err.message || "Unexpected error."}`);
+  }
 }
 
 // Handle logout button
 function handleLogout() {
-  currentUser = null;
-  currentEmail = null;
-
+  resetAppState();
+  setAuthToken(null);
   authContainer.classList.remove("hidden");
   appContainer.classList.add("hidden");
-
-  if (hrChartInstance) {
-    hrChartInstance.destroy();
-  }
-  if (spo2ChartInstance) {
-    spo2ChartInstance.destroy();
-  }
-  hrChartInstance = null;
-  spo2ChartInstance = null;
 }
 
 // Initialize the app page
-function initializeApp(user, email) {
+function initializeApp() {
   showView("dashboard-view");
-  loadWeeklySummary(user);
-  initCharts(user);
+  loadWeeklySummary();
+  initCharts();
   renderDeviceList();
-  loadSettingsForms(user, email);
+  loadSettingsForms();
 }
 
 // Show dashboard view
@@ -434,13 +428,10 @@ function switchDashboardTab(tab) {
 }
 
 // Load user's weekly summary
-function loadWeeklySummary(user) {
-  // CURRENTLY: USE MOCK DATA
-  // REAL VERSION: USE user.measurements
-
-  const avg = Math.round(mockWeeklyData.avg || 0);
-  const min = Math.round(mockWeeklyData.min || 0);
-  const max = Math.round(mockWeeklyData.max || 0);
+function loadWeeklySummary() {
+  const avg = Math.round(weeklyMetrics.avg || 0);
+  const min = Math.round(weeklyMetrics.min || 0);
+  const max = Math.round(weeklyMetrics.max || 0);
 
   document.getElementById(
     "weekly-avg-hr"
@@ -454,34 +445,38 @@ function loadWeeklySummary(user) {
 }
 
 // Initialize the data chart
-function initCharts(user) {
-  // CURRENTLY: USE MOCK DATA
-  // REAL VERSION: USE user.measurements
-
+function initCharts() {
   if (hrChartInstance) hrChartInstance.destroy();
   if (spo2ChartInstance) spo2ChartInstance.destroy();
+
   const hrCtx = document.getElementById("hrChart").getContext("2d");
   const spo2Ctx = document.getElementById("spo2Chart").getContext("2d");
-  const hrData = mockDailyData.hr;
-  const spo2Data = mockDailyData.spo2;
-  const hrMin = Math.min(...hrData);
-  const hrMax = Math.max(...hrData);
-  const spo2Min = Math.min(...spo2Data);
-  const spo2Max = Math.max(...spo2Data);
+
+  const labels = dailyMetrics.labels || [];
+  const hrData = dailyMetrics.hr || [];
+  const spo2Data = dailyMetrics.spo2 || [];
+
+  const hrMin = hrData.length ? Math.min(...hrData) : 0;
+  const hrMax = hrData.length ? Math.max(...hrData) : 0;
+  const spo2Min = spo2Data.length ? Math.min(...spo2Data) : 0;
+  const spo2Max = spo2Data.length ? Math.max(...spo2Data) : 0;
+
   document.getElementById("hr-min-text").textContent = `${hrMin} bpm`;
   document.getElementById("hr-max-text").textContent = `${hrMax} bpm`;
   document.getElementById("spo2-min-text").textContent = `${spo2Min}%`;
   document.getElementById("spo2-max-text").textContent = `${spo2Max}%`;
+
   const createPointStyles = (data, minVal, maxVal) =>
     data.map((val) => {
       if (val === minVal) return "rgb(59, 130, 246)";
       if (val === maxVal) return "rgb(239, 68, 68)";
       return "rgba(239, 68, 68, 0.5)";
     });
+
   hrChartInstance = new Chart(hrCtx, {
     type: "line",
     data: {
-      labels: mockDailyData.labels,
+      labels,
       datasets: [
         {
           label: "Heart Rate",
@@ -498,10 +493,11 @@ function initCharts(user) {
     },
     options: { responsive: true, scales: { y: { beginAtZero: false } } },
   });
+
   spo2ChartInstance = new Chart(spo2Ctx, {
     type: "line",
     data: {
-      labels: mockDailyData.labels,
+      labels,
       datasets: [
         {
           label: "SpO2",
@@ -516,25 +512,22 @@ function initCharts(user) {
         },
       ],
     },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: false, min: 90, max: 100 } },
-    },
+    options: { responsive: true, scales: { y: { beginAtZero: false } } },
   });
 }
 
 // Render device list
 function renderDeviceList() {
   deviceList.innerHTML = "";
-  if (currentUser.devices.length === 0) {
+
+  if (!currentDevices.length) {
     deviceList.innerHTML = `<li class="p-6 text-center text-gray-500">No devices registered.</li>`;
     return;
   }
-  currentUser.devices.forEach((device) => {
+
+  currentDevices.forEach((device) => {
     const li = document.createElement("li");
     li.className = "px-6 py-4 flex items-center justify-between";
-
-    // Create element content with placeholders
     li.innerHTML = `
       <div class="flex items-center flex-grow">
           <span id="icon-dev-${device.id}" class="text-gray-500"></span>
@@ -545,10 +538,9 @@ function renderDeviceList() {
           </div>
       </div>
       <div class="flex-shrink-0 space-x-2">
-          <button data-id="${device.id}" class="edit-device-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Edit</button>
-          <button data-id="${device.id}" class="remove-device-btn rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Remove</button>
-          
-          <button data-id="${device.id}" class="save-device-btn rounded-md bg-green-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hidden">Save</button>
+          <button data-id="${device.id}" data-mongo="${device.mongoId}" class="edit-device-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Edit</button>
+          <button data-id="${device.id}" data-mongo="${device.mongoId}" class="remove-device-btn rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Remove</button>
+          <button data-id="${device.id}" data-mongo="${device.mongoId}" class="save-device-btn rounded-md bg-green-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hidden">Save</button>
           <button data-id="${device.id}" class="cancel-edit-btn rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hidden">Cancel</button>
       </div>
     `;
@@ -565,54 +557,64 @@ async function handleAddDevice(e) {
   e.preventDefault();
   const nameInput = document.getElementById("device-name");
   const idInput = document.getElementById("device-id");
-  const name = nameInput.value;
-  const deviceId = idInput.value;
+  const name = nameInput.value.trim();
+  const deviceId = idInput.value.trim();
 
-  if (name && deviceId) {
-    // Check if device ID exists
-    if (currentUser.devices.find((d) => d.id === deviceId)) {
-      alert("Error: You have already registered a device with this ID.");
-      return;
-    }
+  if (!name || !deviceId) {
+    alert("Error: Please provide both device name and device ID.");
+    return;
+  }
 
-    // Check if device name exists
-    if (
-      currentUser.devices.find(
-        (d) => d.name.toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      alert("Error: A device with this name already exists.");
-      return;
-    }
+  if (currentDevices.find((d) => d.id === deviceId)) {
+    alert("Error: You have already registered a device with this ID.");
+    return;
+  }
 
-    currentUser.devices.push({ id: deviceId, name: name });
-    saveDatabase();
+  if (currentDevices.find((d) => d.name.toLowerCase() === name.toLowerCase())) {
+    alert("Error: A device with this name already exists.");
+    return;
+  }
+
+  try {
+    const response = await apiRequest("/account/devices", {
+      method: "POST",
+      body: { deviceId, name },
+    });
+
+    currentDevices.push(mapDevice(response.data));
     renderDeviceList();
     nameInput.value = "";
     idInput.value = "";
+  } catch (err) {
+    alert(`Failed to add device: ${err.message}`);
   }
 }
 
 // Handle button of deleting a device
 async function handleRemoveDevice(id) {
+  const device = currentDevices.find((d) => d.id === id);
+  if (!device) return;
+
   if (!confirm("Are you sure you want to remove this device?")) {
     return;
   }
 
-  currentUser.devices = currentUser.devices.filter(
-    (device) => device.id !== id
-  );
-  saveDatabase();
-  renderDeviceList();
+  try {
+    await apiRequest(`/account/devices/${device.mongoId}`, {
+      method: "DELETE",
+    });
+
+    currentDevices = currentDevices.filter((d) => d.id !== id);
+    renderDeviceList();
+  } catch (err) {
+    alert(`Failed to remove device: ${err.message}`);
+  }
 }
 
 // Handle button of editing a device information
 function toggleEditMode(id, isEditing) {
-  // Get all elements for this device row
   const nameEl = document.getElementById(`device-name-${id}`);
   const inputEl = document.getElementById(`device-edit-input-${id}`);
-
-  // Find buttons within the list item
   const li = nameEl.closest("li");
   const editBtn = li.querySelector(".edit-device-btn");
   const removeBtn = li.querySelector(".remove-device-btn");
@@ -620,7 +622,6 @@ function toggleEditMode(id, isEditing) {
   const cancelBtn = li.querySelector(".cancel-edit-btn");
 
   if (isEditing) {
-    // Show edit state
     nameEl.classList.add("hidden");
     editBtn.classList.add("hidden");
     removeBtn.classList.add("hidden");
@@ -629,7 +630,6 @@ function toggleEditMode(id, isEditing) {
     saveBtn.classList.remove("hidden");
     cancelBtn.classList.remove("hidden");
   } else {
-    // Show view state
     nameEl.classList.remove("hidden");
     editBtn.classList.remove("hidden");
     removeBtn.classList.remove("hidden");
@@ -638,117 +638,149 @@ function toggleEditMode(id, isEditing) {
     saveBtn.classList.add("hidden");
     cancelBtn.classList.add("hidden");
 
-    // Reset input value to original name
     inputEl.value = nameEl.textContent;
   }
 }
 
 // Handle button of saving device information
-function handleSaveDevice(id) {
-  const inputEl = document.getElementById(`device-edit-input-${id}`);
-  const newName = inputEl.value;
+async function handleSaveDevice(id) {
+  const device = currentDevices.find((d) => d.id === id);
+  if (!device) return;
 
-  // Check if the name is empty
-  if (!newName.trim()) {
+  const inputEl = document.getElementById(`device-edit-input-${id}`);
+  const newName = inputEl.value.trim();
+
+  if (!newName) {
     alert("Error: Device name cannot be empty.");
     return;
   }
 
-  // Check if the name exists
-  const isDuplicate = currentUser.devices.find(
-    (d) => d.name.toLowerCase() === newName.toLowerCase() && d.id !== id
-  );
-  if (isDuplicate) {
+  if (
+    currentDevices.find(
+      (d) => d.name.toLowerCase() === newName.toLowerCase() && d.id !== id
+    )
+  ) {
     alert("Error: A device with this name already exists.");
     return;
   }
 
-  // Update the device information
-  const deviceIndex = currentUser.devices.findIndex((d) => d.id === id);
-  if (deviceIndex > -1) {
-    currentUser.devices[deviceIndex].name = newName;
-    saveDatabase();
+  try {
+    const response = await apiRequest(`/account/devices/${device.mongoId}`, {
+      method: "PUT",
+      body: { name: newName },
+    });
+
+    device.name = response.data.name;
     renderDeviceList();
+  } catch (err) {
+    alert(`Failed to update device: ${err.message}`);
   }
 }
 
 // Load account settings forms
-function loadSettingsForms(user, email) {
-  document.getElementById("user-name-display").textContent = user.name;
-  document.getElementById("user-email-display").textContent = email;
-  document.getElementById("account-name").value = user.name;
-  document.getElementById("account-email").value = email;
+function loadSettingsForms() {
+  if (!currentUser) {
+    return;
+  }
+
+  document.getElementById("user-name-display").textContent = currentUser.name;
+  document.getElementById("user-email-display").textContent = currentUser.email;
+  document.getElementById("account-name").value = currentUser.name;
+  document.getElementById("account-email").value = currentUser.email;
   document.getElementById("measurement-frequency").value =
-    user.settings.frequency;
-  document.getElementById("measurement-start").value = user.settings.startTime;
-  document.getElementById("measurement-end").value = user.settings.endTime;
+    currentUser.settings.frequency;
+  document.getElementById("measurement-start").value =
+    currentUser.settings.startTime;
+  document.getElementById("measurement-end").value =
+    currentUser.settings.endTime;
 }
 
 // Handle button of saving account profile
 async function handleSaveAccount(e) {
   e.preventDefault();
-  const newName = document.getElementById("account-name").value;
+  const newName = document.getElementById("account-name").value.trim();
   const newPassword = accountPassword.value;
   const confirmNewPassword = accountConfirmPassword.value;
 
-  currentUser.name = newName;
-  document.getElementById("user-name-display").textContent = newName;
+  if (!newName) {
+    alert("Error: Name cannot be empty.");
+    return;
+  }
 
-  // Only validate and save password if user entered one
-  if (newPassword) {
-    // Check if two passwords match
+  if (newPassword || confirmNewPassword) {
     if (newPassword !== confirmNewPassword) {
       alert("Error: New passwords do not match.");
       return;
     }
 
-    // Check new password's format
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
       alert(`Invalid new password: ${validation.message}`);
       return;
     }
-
-    // Re-hash and save new password
-    const salt = await generateSalt();
-    const hash = await hashPassword(newPassword, salt);
-    currentUser.hash = hash;
-    currentUser.salt = salt;
-  } else if (confirmNewPassword) {
-    alert("Error: Please enter a new password.");
-    return;
   }
 
-  saveDatabase();
-  alert("Account details saved!");
+  try {
+    const response = await apiRequest("/account/me", {
+      method: "PUT",
+      body: {
+        name: newName,
+        password: newPassword || undefined,
+      },
+    });
 
-  // Clear password fields
-  accountPassword.value = "";
-  accountConfirmPassword.value = "";
+    currentUser = mapUser(response.data);
+    loadSettingsForms();
+    accountPassword.value = "";
+    accountConfirmPassword.value = "";
+    alert("Account details saved!");
+  } catch (err) {
+    alert(`Failed to update account: ${err.message}`);
+  }
 }
 
 // Handle button of saving measurement settings
 async function handleSaveMeasurements(e) {
   e.preventDefault();
 
-  currentUser.settings.frequency = document.getElementById(
-    "measurement-frequency"
-  ).value;
-  currentUser.settings.startTime =
-    document.getElementById("measurement-start").value;
-  currentUser.settings.endTime =
-    document.getElementById("measurement-end").value;
+  const payload = {
+    frequency: Number(document.getElementById("measurement-frequency").value),
+    startTime: document.getElementById("measurement-start").value,
+    endTime: document.getElementById("measurement-end").value,
+  };
 
-  saveDatabase();
-  alert("Measurement settings saved!");
+  try {
+    const response = await apiRequest("/account/config", {
+      method: "PUT",
+      body: payload,
+    });
+
+    currentUser.settings = {
+      frequency: response.data.frequency,
+      startTime: response.data.startTime,
+      endTime: response.data.endTime,
+    };
+
+    alert("Measurement settings saved!");
+  } catch (err) {
+    alert(`Failed to update settings: ${err.message}`);
+  }
 }
 
 // MAIN LOGIC
-document.addEventListener("DOMContentLoaded", () => {
-  // Load the database from local storage
-  loadDatabase();
+document.addEventListener("DOMContentLoaded", async () => {
+  // Load the database from mgdb
+  const storedToken = localStorage.getItem(TOKEN_KEY);
+  if (storedToken) {
+    setAuthToken(storedToken);
+    try {
+      await bootstrapApp();
+    } catch (err) {
+      console.warn("Auto-login failed:", err.message);
+      handleLogout();
+    }
+  }
 
-  // Login/Signup page listeners
   loginTabButton.addEventListener("click", () => switchAuthTab("login"));
   signupTabButton.addEventListener("click", () => switchAuthTab("signup"));
   loginForm.addEventListener("submit", handleLogin);

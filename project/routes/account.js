@@ -4,46 +4,48 @@ const User = require("../models/User");
 const Device = require("../models/Device");
 const Measurement = require("../models/Measurement");
 const { protect } = require("../middleware/auth");
+const buildUserPayload = require("./helpers/userPayload");
 
-// All routes in this file are protected
 router.use(protect);
 
-// @desc    Get current user details (name, email, config)
-// @route   GET /api/account/me
-// @access  Private
-router.get("/me", (req, res) => {
-  // req.user is attached by the 'protect' middleware
-  res.status(200).json({ success: true, data: req.user });
-});
-
-// @desc    Update user details (name, password) (Req 2.2)
-// @route   PUT /api/account/me
-// @access  Private
-router.put("/me", async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
-    const { name, password } = req.body;
-    const user = await User.findById(req.user.id);
-
-    if (name) {
-      user.name = name;
-    }
-
-    // Only update password if it's provided
-    if (password) {
-      user.password = password;
-    }
-
-    await user.save();
-    res.status(200).json({ success: true, data: user });
+    const payload = await buildUserPayload(req.user.id);
+    res.status(200).json({ success: true, data: payload });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });
 
-// @desc    Update user measurement configuration (Req 4.8)
-// @route   PUT /api/account/config
-// @access  Private
+router.put("/me", async (req, res) => {
+  try {
+    const { name, password } = req.body;
+    const user = await User.findById(req.user.id).select("+password");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (name) {
+      user.name = name;
+    }
+
+    if (password) {
+      user.password = password;
+    }
+
+    await user.save();
+    const payload = await buildUserPayload(req.user.id);
+    res.status(200).json({ success: true, data: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
 router.put("/config", async (req, res) => {
   try {
     const { frequency, startTime, endTime } = req.body;
@@ -54,7 +56,7 @@ router.put("/config", async (req, res) => {
         config: { frequency, startTime, endTime },
       },
       { new: true, runValidators: true }
-    ); // 'new: true' returns the updated doc
+    ).lean();
 
     res.status(200).json({ success: true, data: user.config });
   } catch (err) {
@@ -63,14 +65,9 @@ router.put("/config", async (req, res) => {
   }
 });
 
-// --- Device Management ---
-
-// @desc    Get all devices for current user
-// @route   GET /api/account/devices
-// @access  Private
 router.get("/devices", async (req, res) => {
   try {
-    const devices = await Device.find({ user: req.user.id });
+    const devices = await Device.find({ user: req.user.id }).lean();
     res.status(200).json({ success: true, data: devices });
   } catch (err) {
     console.error(err);
@@ -78,9 +75,6 @@ router.get("/devices", async (req, res) => {
   }
 });
 
-// @desc    Add a new device (Req 2.3)
-// @route   POST /api/account/devices
-// @access  Private
 router.post("/devices", async (req, res) => {
   try {
     const { deviceId, name } = req.body;
@@ -91,10 +85,9 @@ router.post("/devices", async (req, res) => {
         .json({ success: false, message: "Please provide deviceId and name" });
     }
 
-    // Check if deviceId is already registered
     if (await Device.findOne({ deviceId })) {
       return res
-        .status(400)
+        .status(409)
         .json({ success: false, message: "Device ID already registered" });
     }
 
@@ -111,9 +104,34 @@ router.post("/devices", async (req, res) => {
   }
 });
 
-// @desc    Remove a device (Req 2.3)
-// @route   DELETE /api/account/devices/:id
-// @access  Private
+router.put("/devices/:id", async (req, res) => {
+  try {
+    const { name } = req.body;
+    const device = await Device.findById(req.params.id);
+
+    if (!device) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Device not found" });
+    }
+
+    if (device.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized to update this device",
+      });
+    }
+
+    device.name = name;
+    await device.save();
+
+    res.status(200).json({ success: true, data: device });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
 router.delete("/devices/:id", async (req, res) => {
   try {
     const device = await Device.findById(req.params.id);
@@ -124,20 +142,14 @@ router.delete("/devices/:id", async (req, res) => {
         .json({ success: false, message: "Device not found" });
     }
 
-    // Make sure user owns this device
     if (device.user.toString() !== req.user.id) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Not authorized to remove this device",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized to remove this device",
+      });
     }
 
-    // Delete all measurements associated with this device
     await Measurement.deleteMany({ device: req.params.id });
-
-    // Delete the device
     await device.deleteOne();
 
     res.status(200).json({ success: true, data: {} });

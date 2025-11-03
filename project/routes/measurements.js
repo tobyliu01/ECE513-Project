@@ -4,25 +4,28 @@ const Measurement = require("../models/Measurement");
 const Device = require("../models/Device");
 const { protect, protectDevice } = require("../middleware/auth");
 
-// --- IoT Device Endpoint ---
+const formatDaily = (docs) => ({
+  labels: docs.map((m) =>
+    new Date(m.timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  ),
+  hr: docs.map((m) => m.heartRate),
+  spo2: docs.map((m) => m.spo2),
+});
 
-// @desc    IoT device posts new measurement
-// @route   POST /api/measurements
-// @access  Private (Device API Key)
 router.post("/", protectDevice, async (req, res) => {
   try {
     const { deviceId, heartRate, spo2 } = req.body;
 
     if (!deviceId || heartRate === undefined || spo2 === undefined) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Missing required fields: deviceId, heartRate, spo2",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: deviceId, heartRate, spo2",
+      });
     }
 
-    // Find the device in the database
     const device = await Device.findOne({ deviceId });
     if (!device) {
       return res
@@ -30,10 +33,9 @@ router.post("/", protectDevice, async (req, res) => {
         .json({ success: false, message: "Device not registered" });
     }
 
-    // Create new measurement
     const measurement = await Measurement.create({
       device: device._id,
-      user: device.user, // User is linked from the device
+      user: device.user,
       heartRate,
       spo2,
       timestamp: new Date(),
@@ -46,21 +48,14 @@ router.post("/", protectDevice, async (req, res) => {
   }
 });
 
-// --- Web App Endpoints ---
-
-// @desc    Get detailed daily measurements (Req 4.4)
-// @route   GET /api/measurements/daily
-// @access  Private (User Token)
 router.get("/daily", protect, async (req, res) => {
   try {
-    const dateStr = req.query.date; // Expects "YYYY-MM-DD"
+    const dateStr = req.query.date;
     if (!dateStr) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Please provide a 'date' query parameter.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a 'date' query parameter.",
+      });
     }
 
     const startDate = new Date(dateStr);
@@ -75,18 +70,19 @@ router.get("/daily", protect, async (req, res) => {
         $gte: startDate,
         $lt: endDate,
       },
-    }).sort("timestamp"); // Sort by time (Req 4.5)
+    })
+      .sort("timestamp")
+      .lean();
 
-    res.status(200).json({ success: true, data: measurements });
+    res
+      .status(200)
+      .json({ success: true, data: formatDaily(measurements || []) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });
 
-// @desc    Get weekly summary (avg, min, max) (Req 4.3)
-// @route   GET /api/measurements/weekly
-// @access  Private (User Token)
 router.get("/weekly", protect, async (req, res) => {
   try {
     const sevenDaysAgo = new Date();
@@ -95,16 +91,14 @@ router.get("/weekly", protect, async (req, res) => {
 
     const summary = await Measurement.aggregate([
       {
-        // Find measurements for this user in the last 7 days
         $match: {
           user: req.user._id,
           timestamp: { $gte: sevenDaysAgo },
         },
       },
       {
-        // Group them to calculate stats
         $group: {
-          _id: null, // Group all as one
+          _id: null,
           avgHeartRate: { $avg: "$heartRate" },
           minHeartRate: { $min: "$heartRate" },
           maxHeartRate: { $max: "$heartRate" },
@@ -112,16 +106,20 @@ router.get("/weekly", protect, async (req, res) => {
       },
     ]);
 
-    if (summary.length === 0) {
-      // No data for the last 7 days
-      return res.status(200).json({
-        success: true,
-        data: { avgHeartRate: 0, minHeartRate: 0, maxHeartRate: 0 },
-      });
-    }
+    const stats = summary[0] || {
+      avgHeartRate: 0,
+      minHeartRate: 0,
+      maxHeartRate: 0,
+    };
 
-    // Return the first (and only) element from the summary
-    res.status(200).json({ success: true, data: summary[0] });
+    res.status(200).json({
+      success: true,
+      data: {
+        avg: Math.round(stats.avgHeartRate || 0),
+        min: Math.round(stats.minHeartRate || 0),
+        max: Math.round(stats.maxHeartRate || 0),
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server Error" });
