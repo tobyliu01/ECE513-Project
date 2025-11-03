@@ -1,10 +1,12 @@
-# Pre-requisite
+# Heart Rate Track Project
+
+## Pre-requisite
 
 CLONE THIS REPO AS THE ROOT FOLDER OF THE PROJECT.
 
 Make sure you installed nvm and express.
 
-# Setup
+## Setup
 
 Enter this folder.
 
@@ -39,3 +41,10 @@ npm start
 ```
 
 The application runs on `http://${PUBLIC_IP_ADDRESS}:3000`.
+
+## Password Requirement
+
+The password should
+
+1. be at least 8-digit long, and
+2. contains at least 1 lowercase letter, 1 uppercase letter, and 1 digit
