@@ -1,6 +1,8 @@
+// Helper to build the standardized user payload consumed by the frontend.
 const User = require("../../models/User");
 const Device = require("../../models/Device");
 
+// Fetch user and devices concurrently, then map to lightweight DTO.
 async function buildUserPayload(userId) {
   const [userDoc, deviceDocs] = await Promise.all([
     User.findById(userId).lean(),
@@ -24,4 +26,5 @@ async function buildUserPayload(userId) {
   };
 }
 
+// Export for reuse across auth/account routes.
 module.exports = buildUserPayload;

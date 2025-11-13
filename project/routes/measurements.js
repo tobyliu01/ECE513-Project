@@ -1,9 +1,11 @@
+// Routes for ingesting and querying heart-rate/SpO2 measurements.
 const express = require("express");
 const router = express.Router();
 const Measurement = require("../models/Measurement");
 const Device = require("../models/Device");
 const { protect, protectDevice } = require("../middleware/auth");
 
+// Normalize raw measurement docs into chart-friendly shape.
 const formatDaily = (docs) => ({
   labels: docs.map((m) =>
     new Date(m.timestamp).toLocaleTimeString([], {
@@ -15,15 +17,18 @@ const formatDaily = (docs) => ({
   spo2: docs.map((m) => m.spo2),
 });
 
+// POST /api/measurements – device ingests a new measurement using API key.
 router.post("/", protectDevice, async (req, res) => {
   try {
     const { deviceId, heartRate, spo2 } = req.body;
 
     if (!deviceId || heartRate === undefined || spo2 === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: deviceId, heartRate, spo2",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Missing required fields: deviceId, heartRate, spo2",
+        });
     }
 
     const device = await Device.findOne({ deviceId });
@@ -48,14 +53,17 @@ router.post("/", protectDevice, async (req, res) => {
   }
 });
 
+// GET /api/measurements/daily – return time-series data for selected day.
 router.get("/daily", protect, async (req, res) => {
   try {
     const dateStr = req.query.date;
     if (!dateStr) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a 'date' query parameter.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Please provide a 'date' query parameter.",
+        });
     }
 
     const startDate = new Date(dateStr);
@@ -83,6 +91,7 @@ router.get("/daily", protect, async (req, res) => {
   }
 });
 
+// GET /api/measurements/weekly – aggregate last 7 days into summary stats.
 router.get("/weekly", protect, async (req, res) => {
   try {
     const sevenDaysAgo = new Date();
@@ -106,11 +115,8 @@ router.get("/weekly", protect, async (req, res) => {
       },
     ]);
 
-    const stats = summary[0] || {
-      avgHeartRate: 0,
-      minHeartRate: 0,
-      maxHeartRate: 0,
-    };
+    const stats =
+      summary[0] || { avgHeartRate: 0, minHeartRate: 0, maxHeartRate: 0 };
 
     res.status(200).json({
       success: true,

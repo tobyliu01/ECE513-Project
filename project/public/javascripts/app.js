@@ -1,3 +1,4 @@
+// prepare for backend API calls and app state management
 const API_BASE_URL = "/api";
 const TOKEN_KEY = "heartTrackToken";
 
@@ -679,9 +680,7 @@ async function handleSaveDevice(id) {
 
 // Load account settings forms
 function loadSettingsForms() {
-  if (!currentUser) {
-    return;
-  }
+  if (!currentUser) return;
 
   document.getElementById("user-name-display").textContent = currentUser.name;
   document.getElementById("user-email-display").textContent = currentUser.email;

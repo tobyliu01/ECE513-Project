@@ -6,8 +6,10 @@ const Measurement = require("../models/Measurement");
 const { protect } = require("../middleware/auth");
 const buildUserPayload = require("./helpers/userPayload");
 
+// All endpoints below require a valid user JWT.
 router.use(protect);
 
+// GET /api/account/me – fetch current user's profile snapshot.
 router.get("/me", async (req, res) => {
   try {
     const payload = await buildUserPayload(req.user.id);
@@ -18,6 +20,7 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// PUT /api/account/me – update name/password, then return refreshed payload.
 router.put("/me", async (req, res) => {
   try {
     const { name, password } = req.body;
@@ -46,6 +49,7 @@ router.put("/me", async (req, res) => {
   }
 });
 
+// PUT /api/account/config – update measurement preferences.
 router.put("/config", async (req, res) => {
   try {
     const { frequency, startTime, endTime } = req.body;
@@ -65,6 +69,7 @@ router.put("/config", async (req, res) => {
   }
 });
 
+// GET /api/account/devices – list all devices owned by current user.
 router.get("/devices", async (req, res) => {
   try {
     const devices = await Device.find({ user: req.user.id }).lean();
@@ -75,6 +80,7 @@ router.get("/devices", async (req, res) => {
   }
 });
 
+// POST /api/account/devices – register a new device after validation.
 router.post("/devices", async (req, res) => {
   try {
     const { deviceId, name } = req.body;
@@ -104,6 +110,7 @@ router.post("/devices", async (req, res) => {
   }
 });
 
+// PUT /api/account/devices/:id – rename a device if user owns it.
 router.put("/devices/:id", async (req, res) => {
   try {
     const { name } = req.body;
@@ -132,6 +139,7 @@ router.put("/devices/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/account/devices/:id – remove device and its measurements.
 router.delete("/devices/:id", async (req, res) => {
   try {
     const device = await Device.findById(req.params.id);

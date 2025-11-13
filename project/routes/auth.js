@@ -1,15 +1,19 @@
+// Routes for user authentication (registration and login).
+
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const Device = require("../models/Device");
 const buildUserPayload = require("./helpers/userPayload");
 
+// Issue JWT and return trimmed user payload after successful auth.
 const sendAuthResponse = async (user, statusCode, res) => {
   const token = user.getSignedJwtToken();
   const payload = await buildUserPayload(user._id);
   res.status(statusCode).json({ success: true, token, user: payload });
 };
 
+// POST /api/auth/register – create user + initial device, enforce uniqueness.
 router.post("/register", async (req, res) => {
   try {
     const { email, password, deviceId } = req.body;
@@ -52,6 +56,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// POST /api/auth/login – verify credentials and return JWT + user data.
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
