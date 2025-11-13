@@ -1,6 +1,8 @@
 // prepare for backend API calls and app state management
 const API_BASE_URL = "/api";
 const TOKEN_KEY = "heartTrackToken";
+const PHYSICIANS_STORAGE_KEY = "heartTrackPhysicians";
+const PATIENT_ASSIGNMENTS_KEY = "heartTrackPhysicianAssignments";
 
 let authToken = null;
 let currentUser = null;
@@ -16,6 +18,30 @@ const setAuthToken = (token) => {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+};
+
+const readPhysicians = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PHYSICIANS_STORAGE_KEY)) || [];
+  } catch (err) {
+    console.warn("Failed to parse physicians storage:", err);
+    return [];
+  }
+};
+
+const readPatientAssignments = () => {
+  try {
+    return (
+      JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {}
+    );
+  } catch (err) {
+    console.warn("Failed to parse physician assignments:", err);
+    return {};
+  }
+};
+
+const writePatientAssignments = (payload) => {
+  localStorage.setItem(PATIENT_ASSIGNMENTS_KEY, JSON.stringify(payload));
 };
 
 const apiRequest = async (
@@ -94,6 +120,7 @@ const bootstrapApp = async (seedUser) => {
   authContainer.classList.add("hidden");
   appContainer.classList.remove("hidden");
 
+  syncPatientAssignmentData();
   initializeApp();
 };
 
@@ -164,6 +191,11 @@ const accountSettingsForm = document.getElementById("account-settings-form");
 const measurementSettingsForm = document.getElementById(
   "measurement-settings-form"
 );
+const physicianSelectionForm = document.getElementById(
+  "physician-selection-form"
+);
+const physicianSelect = document.getElementById("physician-select");
+const physicianStatusText = document.getElementById("physician-status-text");
 
 // Settings fields
 const accountPassword = document.getElementById("account-password");
@@ -692,6 +724,113 @@ function loadSettingsForms() {
     currentUser.settings.startTime;
   document.getElementById("measurement-end").value =
     currentUser.settings.endTime;
+  renderPhysicianOptions();
+}
+
+const getCurrentAssignment = () => {
+  if (!currentUser) return null;
+  const assignments = readPatientAssignments();
+  return assignments[currentUser.id] || null;
+};
+
+function renderPhysicianOptions() {
+  if (!physicianSelect || !physicianStatusText) return;
+
+  const physicians = readPhysicians();
+  const currentAssignment = getCurrentAssignment();
+
+  physicianSelect.innerHTML =
+    '<option value="">Select from registered physicians</option>';
+
+  physicians.forEach((doctor) => {
+    const option = document.createElement("option");
+    option.value = doctor.id;
+    option.textContent = `${doctor.name} (${doctor.email})`;
+    if (currentAssignment?.physicianId === doctor.id) {
+      option.selected = true;
+    }
+    physicianSelect.appendChild(option);
+  });
+
+  physicianSelect.disabled = !physicians.length;
+
+  if (!physicians.length) {
+    physicianStatusText.textContent =
+      "No physicians registered yet. Share the link below.";
+  } else if (currentAssignment?.physicianId) {
+    const selectedDoctor =
+      physicians.find((doc) => doc.id === currentAssignment.physicianId) ||
+      null;
+    physicianStatusText.textContent = selectedDoctor
+      ? `${selectedDoctor.name} (${selectedDoctor.email})`
+      : "Assigned physician not found.";
+  } else {
+    physicianStatusText.textContent = "No physician selected";
+  }
+}
+
+function syncPatientAssignmentData() {
+  if (!currentUser) return;
+  const assignments = readPatientAssignments();
+  const existing = assignments[currentUser.id];
+  if (!existing) return;
+
+  assignments[currentUser.id] = {
+    ...existing,
+    patientId: currentUser.id,
+    patientName: currentUser.name,
+    patientEmail: currentUser.email,
+    weeklyMetrics,
+    dailyMetrics,
+    measurementFrequency: currentUser.settings.frequency,
+    updatedAt: new Date().toISOString(),
+  };
+
+  writePatientAssignments(assignments);
+}
+
+function handlePhysicianSelection(e) {
+  e.preventDefault();
+  if (!currentUser || !physicianSelect) return;
+
+  const selectedPhysicianId = physicianSelect.value;
+  const physicians = readPhysicians();
+  const assignments = readPatientAssignments();
+
+  if (!selectedPhysicianId) {
+    delete assignments[currentUser.id];
+    writePatientAssignments(assignments);
+    renderPhysicianOptions();
+    alert("Physician assignment cleared.");
+    return;
+  }
+
+  const selectedPhysician = physicians.find(
+    (doctor) => doctor.id === selectedPhysicianId
+  );
+
+  if (!selectedPhysician) {
+    alert("Selected physician was not found. Please refresh the list.");
+    renderPhysicianOptions();
+    return;
+  }
+
+  assignments[currentUser.id] = {
+    physicianId: selectedPhysician.id,
+    physicianName: selectedPhysician.name,
+    physicianEmail: selectedPhysician.email,
+    patientId: currentUser.id,
+    patientName: currentUser.name,
+    patientEmail: currentUser.email,
+    weeklyMetrics,
+    dailyMetrics,
+    measurementFrequency: currentUser.settings.frequency,
+    updatedAt: new Date().toISOString(),
+  };
+
+  writePatientAssignments(assignments);
+  renderPhysicianOptions();
+  alert("Physician selection saved.");
 }
 
 // Handle button of saving account profile
@@ -759,6 +898,8 @@ async function handleSaveMeasurements(e) {
       startTime: response.data.startTime,
       endTime: response.data.endTime,
     };
+
+    syncPatientAssignmentData();
 
     alert("Measurement settings saved!");
   } catch (err) {
@@ -852,4 +993,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   accountSettingsForm.addEventListener("submit", handleSaveAccount);
   measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
+  if (physicianSelectionForm) {
+    physicianSelectionForm.addEventListener("submit", handlePhysicianSelection);
+  }
 });

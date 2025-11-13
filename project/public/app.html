@@ -50,6 +50,9 @@
                             class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">Home</a>
                         <a href="./reference.html"
                             class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">References</a>
+                        <a href="./physician.html"
+                            class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">Physician
+                            Portal</a>
                         <a href="./app.html"
                             class="text-red-500 border-b-2 border-red-500 px-1 pt-1 text-sm font-medium">User
                             Login</a>
@@ -394,7 +397,7 @@
                         </form>
                     </div>
 
-                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
                         <h2 class="text-xl font-semibold mb-4">
                             Measurement Configuration
                         </h2>
@@ -429,6 +432,32 @@
                                 <button type="submit"
                                     class="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                                     Save Configuration
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <div class="mb-4">
+                            <h2 class="text-xl font-semibold">Physician Assignment</h2>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Current physician:
+                            <span id="physician-status-text" class="font-medium text-gray-800">No physician selected</span>
+                        </p>
+                        <form id="physician-selection-form" class="space-y-4">
+                            <div>
+                                <label for="physician-select" class="block text-sm font-medium text-gray-700">Choose a
+                                    registered physician</label>
+                                <select id="physician-select"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                    <option value="">Select from registered physicians</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <button type="submit"
+                                    class="rounded-md border border-transparent bg-gray-900 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2 md:w-auto">
+                                    Save Physician
                                 </button>
                             </div>
                         </form>

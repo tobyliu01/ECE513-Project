@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heart Track - Physician Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+        }
+
+        .portal-nav-button.active {
+            background-color: #1f2937;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <svg class="w-8 h-8 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                    <span class="font-bold text-xl ml-2">Heart Track</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="hidden md:flex space-x-8">
+                        <a href="./index.html"
+                            class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">Home</a>
+                        <a href="./reference.html"
+                            class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">References</a>
+                        <a href="./physician.html"
+                            class="text-red-500 border-b-2 border-red-500 px-1 pt-1 text-sm font-medium">Physician
+                            Portal</a>
+                        <a href="./app.html"
+                            class="text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300 px-1 pt-1 text-sm font-medium">User
+                            Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section id="physician-auth" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-lg shadow-lg">
+            <div class="text-center">
+                <div class="flex justify-center text-red-500 mb-4">
+                    <svg class="w-12 h-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900">Physician Portal</h1>
+                <p class="mt-2 text-sm text-gray-500">Sign in to view your patients and their data.</p>
+            </div>
+
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="-mb-px flex space-x-8" aria-label="Physician tabs">
+                    <button id="physician-login-tab"
+                        class="border-red-500 text-red-600 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        Sign In
+                    </button>
+                    <button id="physician-register-tab"
+                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        Register
+                    </button>
+                </nav>
+            </div>
+
+            <form id="physician-login-form" class="space-y-5">
+                <div>
+                    <label for="physician-login-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="physician-login-email" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        placeholder="physician@example.com" />
+                </div>
+                <div>
+                    <label for="physician-login-password"
+                        class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="physician-login-password" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        placeholder="Enter your password" />
+                </div>
+                <p id="physician-login-error" class="text-sm text-red-600 hidden">
+                    Incorrect password. Please try again.
+                </p>
+                <button type="submit"
+                    class="w-full rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Sign In
+                </button>
+            </form>
+
+            <form id="physician-register-form" class="space-y-5 hidden" novalidate>
+                <div>
+                    <label for="physician-register-name" class="block text-sm font-medium text-gray-700">Full
+                        Name</label>
+                    <input type="text" id="physician-register-name" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
+                </div>
+                <div>
+                    <label for="physician-register-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="physician-register-email" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        placeholder="physician@example.com" />
+                </div>
+                <div>
+                    <label for="physician-register-password"
+                        class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="physician-register-password" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
+                </div>
+                <div>
+                    <label for="physician-register-confirm" class="block text-sm font-medium text-gray-700">Confirm
+                        Password</label>
+                    <input type="password" id="physician-register-confirm" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm" />
+                </div>
+                <p id="physician-register-error" class="text-sm text-red-600 hidden"></p>
+                <p id="physician-register-success" class="text-sm text-green-600 hidden"></p>
+                <button type="submit"
+                    class="w-full rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Create Account
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <div id="physician-app" class="hidden">
+        <div class="flex h-screen bg-gray-100">
+            <aside class="w-64 flex-shrink-0 bg-gray-900 text-gray-300 flex flex-col p-4">
+                <div class="flex items-center h-16 flex-shrink-0 px-4 mb-6">
+                    <span class="font-semibold text-2xl text-white">Heart Track MD</span>
+                </div>
+                <nav class="flex-grow space-y-2">
+                    <button data-view="patient-list-view"
+                        class="portal-nav-button w-full px-4 py-3 rounded-lg text-left font-medium hover:bg-gray-800">
+                        All Patients
+                    </button>
+                    <button data-view="patient-summary-view"
+                        class="portal-nav-button w-full px-4 py-3 rounded-lg text-left font-medium hover:bg-gray-800">
+                        Patient Summary
+                    </button>
+                    <button data-view="patient-daily-view"
+                        class="portal-nav-button w-full px-4 py-3 rounded-lg text-left font-medium hover:bg-gray-800">
+                        Patient Daily View
+                    </button>
+                </nav>
+                <button id="physician-logout-button"
+                    class="mt-4 flex items-center justify-center rounded-md bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Sign Out
+                </button>
+            </aside>
+            <main class="flex-1 overflow-y-auto">
+                <div class="max-w-6xl mx-auto py-10 px-6 space-y-8">
+                    <header class="bg-white rounded-lg shadow p-6">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">Logged in as</p>
+                                <h1 class="text-2xl font-semibold text-gray-900" id="physician-name-display">Physician
+                                    Name</h1>
+                                <p class="text-sm text-gray-500" id="physician-email-display">physician@example.com</p>
+                            </div>
+                            <div class="bg-gray-100 rounded-lg px-4 py-3">
+                                <p class="text-xs uppercase text-gray-500 tracking-wide">Current Patient</p>
+                                <p class="font-medium text-gray-900" id="selected-patient-name">None selected</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section id="patient-list-view" class="physician-view bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-2xl font-semibold text-gray-900">Patient List</h2>
+                                <p class="text-sm text-gray-500">All patients who have selected you as their physician.
+                                </p>
+                            </div>
+                            <span
+                                class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700"
+                                id="patient-count-pill">0 patients</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Patient</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Avg (7d)</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Max (7d)</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Min (7d)</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Frequency</th>
+                                        <th
+                                            class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="physician-patient-rows" class="divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section id="patient-summary-view" class="physician-view bg-white rounded-lg shadow p-6 hidden">
+                        <div id="patient-summary-empty" class="text-center py-8 text-gray-500">
+                            Select a patient from the list to view their weekly metrics.
+                        </div>
+                        <div id="patient-summary-content" class="hidden space-y-6">
+                            <div class="flex flex-col gap-2">
+                                <h2 class="text-2xl font-semibold text-gray-900" id="patient-summary-name">Patient
+                                    Name</h2>
+                                <p class="text-sm text-gray-500" id="patient-summary-email">patient@example.com</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                    <p class="text-xs uppercase text-gray-500 tracking-wide">Average Heart Rate</p>
+                                    <p class="text-3xl font-semibold text-gray-900" id="patient-summary-avg">-- bpm</p>
+                                </div>
+                                <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                    <p class="text-xs uppercase text-gray-500 tracking-wide">Maximum Heart Rate</p>
+                                    <p class="text-3xl font-semibold text-red-600" id="patient-summary-max">-- bpm</p>
+                                </div>
+                                <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                    <p class="text-xs uppercase text-gray-500 tracking-wide">Minimum Heart Rate</p>
+                                    <p class="text-3xl font-semibold text-blue-600" id="patient-summary-min">-- bpm</p>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-6">
+                                <h3 class="text-lg font-semibold mb-4">Measurement Schedule</h3>
+                                <form id="physician-frequency-form" class="space-y-4 sm:flex sm:items-center sm:gap-4">
+                                    <div class="flex-1">
+                                        <label for="physician-frequency-select"
+                                            class="block text-sm font-medium text-gray-700 mb-1">Measurement
+                                            Frequency</label>
+                                        <select id="physician-frequency-select"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                                            <option value="15">Every 15 minutes</option>
+                                            <option value="30">Every 30 minutes</option>
+                                            <option value="60">Every 1 hour</option>
+                                            <option value="120">Every 2 hours</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit"
+                                        class="w-full sm:w-auto rounded-md border border-transparent bg-gray-900 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2">
+                                        Update Frequency
+                                    </button>
+                                </form>
+                                <p class="text-xs text-gray-500 mt-2">Adjusting the frequency here updates the plan
+                                    shown in your physician portal summary.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="patient-daily-view" class="physician-view bg-white rounded-lg shadow p-6 hidden">
+                        <div id="patient-daily-empty" class="text-center py-8 text-gray-500">
+                            Select a patient to review their detailed daily measurements.
+                        </div>
+                        <div id="patient-daily-content" class="hidden space-y-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="text-lg font-semibold text-gray-900">Heart Rate Trend</h3>
+                                        <span class="text-sm text-gray-500">Today</span>
+                                    </div>
+                                    <canvas id="physician-hr-chart" height="160"></canvas>
+                                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                            <p class="text-xs uppercase text-gray-500 tracking-wide">Heart Rate Min</p>
+                                            <p class="text-2xl font-semibold text-blue-600" id="physician-hr-min">-- bpm</p>
+                                        </div>
+                                        <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                            <p class="text-xs uppercase text-gray-500 tracking-wide">Heart Rate Max</p>
+                                            <p class="text-2xl font-semibold text-red-600" id="physician-hr-max">-- bpm</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="text-lg font-semibold text-gray-900">SpO2 Trend</h3>
+                                        <span class="text-sm text-gray-500">Today</span>
+                                    </div>
+                                    <canvas id="physician-spo2-chart" height="160"></canvas>
+                                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                            <p class="text-xs uppercase text-gray-500 tracking-wide">SpO2 Min</p>
+                                            <p class="text-2xl font-semibold text-blue-600" id="physician-spo2-min">-- %</p>
+                                        </div>
+                                        <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                            <p class="text-xs uppercase text-gray-500 tracking-wide">SpO2 Max</p>
+                                            <p class="text-2xl font-semibold text-red-600" id="physician-spo2-max">-- %</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="javascripts/physician.js" type="module"></script>
+</body>
+
+</html>
