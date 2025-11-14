@@ -11,6 +11,7 @@ let weeklyMetrics = { avg: 0, min: 0, max: 0 };
 let dailyMetrics = { labels: [], hr: [], spo2: [] };
 let selectedDate = new Date();
 
+// Persists the latest JWT token state so API calls stay authenticated.
 const setAuthToken = (token) => {
   authToken = token;
   if (token) {
@@ -20,6 +21,7 @@ const setAuthToken = (token) => {
   }
 };
 
+// Reads the locally stored physician registry for assignment dropdowns.
 const readPhysicians = () => {
   try {
     return JSON.parse(localStorage.getItem(PHYSICIANS_STORAGE_KEY)) || [];
@@ -29,21 +31,22 @@ const readPhysicians = () => {
   }
 };
 
+// Retrieves physician assignment metadata keyed by patient id.
 const readPatientAssignments = () => {
   try {
-    return (
-      JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {}
-    );
+    return JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {};
   } catch (err) {
     console.warn("Failed to parse physician assignments:", err);
     return {};
   }
 };
 
+// Saves the entire physician assignment object back to local storage.
 const writePatientAssignments = (payload) => {
   localStorage.setItem(PATIENT_ASSIGNMENTS_KEY, JSON.stringify(payload));
 };
 
+// Small wrapper around fetch that injects auth headers and JSON parsing.
 const apiRequest = async (
   path,
   { method = "GET", body, skipAuth = false } = {}
@@ -76,6 +79,7 @@ const apiRequest = async (
   return payload;
 };
 
+// Normalizes the backend user payload into the shape expected by the UI.
 const mapUser = (raw) => ({
   id: raw.id,
   email: raw.email,
@@ -87,12 +91,14 @@ const mapUser = (raw) => ({
   },
 });
 
+// Converts a device document into the simplified UI representation.
 const mapDevice = (device) => ({
   id: device.deviceId,
   mongoId: device.mongoId || device._id,
   name: device.name,
 });
 
+// Clears all cached user/device/metric state when logging out or failing auth.
 const resetAppState = () => {
   currentUser = null;
   currentDevices = [];
@@ -101,6 +107,7 @@ const resetAppState = () => {
   selectedDate = new Date();
 };
 
+// Fetches user profile, devices, and metrics before showing the dashboard.
 const bootstrapApp = async (seedUser) => {
   const today = selectedDate.toISOString().split("T")[0];
 
@@ -727,12 +734,14 @@ function loadSettingsForms() {
   renderPhysicianOptions();
 }
 
+// Fetches the current user's physician assignment record.
 const getCurrentAssignment = () => {
   if (!currentUser) return null;
   const assignments = readPatientAssignments();
   return assignments[currentUser.id] || null;
 };
 
+// Builds the physician assignment dropdown and status label.
 function renderPhysicianOptions() {
   if (!physicianSelect || !physicianStatusText) return;
 
@@ -769,6 +778,7 @@ function renderPhysicianOptions() {
   }
 }
 
+// Pushes the latest user metrics/settings into their physician record.
 function syncPatientAssignmentData() {
   if (!currentUser) return;
   const assignments = readPatientAssignments();
@@ -789,6 +799,7 @@ function syncPatientAssignmentData() {
   writePatientAssignments(assignments);
 }
 
+// Handles saving/clearing a physician selection from settings.
 function handlePhysicianSelection(e) {
   e.preventDefault();
   if (!currentUser || !physicianSelect) return;

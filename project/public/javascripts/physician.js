@@ -31,7 +31,9 @@ const logoutButton = document.getElementById("physician-logout-button");
 const navButtons = document.querySelectorAll(".portal-nav-button");
 const portalViews = document.querySelectorAll(".physician-view");
 const physicianNameDisplay = document.getElementById("physician-name-display");
-const physicianEmailDisplay = document.getElementById("physician-email-display");
+const physicianEmailDisplay = document.getElementById(
+  "physician-email-display"
+);
 const selectedPatientNameDisplay = document.getElementById(
   "selected-patient-name"
 );
@@ -61,11 +63,11 @@ const fallbackDailyData = {
   spo2: [98, 99, 99, 98, 97, 98],
 };
 
+// Generates a pseudo-unique identifier for a new physician account.
 const generatePhysicianId = () =>
-  `phys-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 7)}`;
+  `phys-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+// Validates the format of physician passwords.
 const validatePhysicianPassword = (password) => {
   if (!password || password.length < 8) {
     return {
@@ -98,6 +100,7 @@ const validatePhysicianPassword = (password) => {
   return { isValid: true };
 };
 
+// Displays a registration error message inline with the form.
 const showRegisterError = (message) => {
   if (!registerErrorText) return;
   registerErrorText.textContent = message;
@@ -105,6 +108,7 @@ const showRegisterError = (message) => {
   registerSuccessText?.classList.add("hidden");
 };
 
+// Displays a success banner once physician registration completes.
 const showRegisterSuccess = (message) => {
   if (!registerSuccessText) return;
   registerSuccessText.textContent = message;
@@ -112,6 +116,7 @@ const showRegisterSuccess = (message) => {
   registerErrorText?.classList.add("hidden");
 };
 
+// Hides any previous registration error or success feedback.
 const clearRegisterMessages = () => {
   registerErrorText?.classList.add("hidden");
   registerSuccessText?.classList.add("hidden");
@@ -122,6 +127,7 @@ const AUTH_ACTIVE_TAB =
 const AUTH_INACTIVE_TAB =
   "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm";
 
+// Switches between the login and registration forms for physicians.
 const switchAuthTab = (tab) => {
   if (!loginForm || !registerForm) return;
 
@@ -145,6 +151,7 @@ const switchAuthTab = (tab) => {
   clearRegisterMessages();
 };
 
+// Retrieves the locally stored physician roster for authentication.
 const getStoredPhysicians = () => {
   try {
     return JSON.parse(localStorage.getItem(PHYSICIANS_STORAGE_KEY)) || [];
@@ -154,10 +161,12 @@ const getStoredPhysicians = () => {
   }
 };
 
+// Persists the entire physician list back into local storage.
 const savePhysicians = (payload) => {
   localStorage.setItem(PHYSICIANS_STORAGE_KEY, JSON.stringify(payload));
 };
 
+// Reads the physician assignment map keyed by patient id.
 const getAssignments = () => {
   try {
     return JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {};
@@ -167,10 +176,12 @@ const getAssignments = () => {
   }
 };
 
+// Saves an updated physician assignment map.
 const saveAssignments = (payload) => {
   localStorage.setItem(PATIENT_ASSIGNMENTS_KEY, JSON.stringify(payload));
 };
 
+// Loads persisted mappings of physician ids to their selected patient.
 const getSelectedPatientMap = () => {
   try {
     return JSON.parse(localStorage.getItem(SELECTED_PATIENT_KEY)) || {};
@@ -180,6 +191,7 @@ const getSelectedPatientMap = () => {
   }
 };
 
+// Writes the physician’s current patient selection back into storage.
 const persistSelectedPatient = () => {
   if (!currentPhysician) return;
   const map = getSelectedPatientMap();
@@ -191,6 +203,7 @@ const persistSelectedPatient = () => {
   localStorage.setItem(SELECTED_PATIENT_KEY, JSON.stringify(map));
 };
 
+// Filters the assignment list down to patients owned by the logged-in physician.
 const getPatientsForPhysician = () => {
   if (!currentPhysician) return [];
   const assignments = getAssignments();
@@ -199,16 +212,19 @@ const getPatientsForPhysician = () => {
   );
 };
 
+// Formats a BPM value for display, handling missing data.
 const formatBpm = (value) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "-- bpm";
   return `${Math.round(value)} bpm`;
 };
 
+// Formats the measurement frequency text for the patient table.
 const formatFrequency = (value) => {
   if (!value) return "User default";
   return `${value} min`;
 };
 
+// Fetches the full assignment record for the currently selected patient.
 const getSelectedPatientRecord = () => {
   if (!selectedPatientId) return null;
   const assignments = getAssignments();
@@ -217,6 +233,7 @@ const getSelectedPatientRecord = () => {
   return entry;
 };
 
+// Handles view switching in the physician portal sidebar.
 const setPortalView = (viewId) => {
   portalViews.forEach((view) => view.classList.add("hidden"));
   navButtons.forEach((btn) => btn.classList.remove("active"));
@@ -236,6 +253,7 @@ const setPortalView = (viewId) => {
   }
 };
 
+// Updates the banner showing which patient is currently active.
 const updateSelectedPatientBanner = () => {
   if (!selectedPatientNameDisplay) return;
   const patient = getSelectedPatientRecord();
@@ -244,6 +262,7 @@ const updateSelectedPatientBanner = () => {
     : "None selected";
 };
 
+// Renders the master patient table with metrics and actions.
 const renderPatientList = () => {
   if (!patientRows || !patientCountPill) return;
 
@@ -252,9 +271,7 @@ const renderPatientList = () => {
   );
 
   patientCountPill.textContent =
-    patients.length === 1
-      ? "1 patient"
-      : `${patients.length} patients`;
+    patients.length === 1 ? "1 patient" : `${patients.length} patients`;
 
   if (!patients.length) {
     patientRows.innerHTML = `<tr>
@@ -293,7 +310,9 @@ const renderPatientList = () => {
 
     row.innerHTML = `
       <td class="px-4 py-4">
-        <div class="text-sm font-medium text-gray-900">${patient.patientName}</div>
+        <div class="text-sm font-medium text-gray-900">${
+          patient.patientName
+        }</div>
         <div class="text-sm text-gray-500">${patient.patientEmail}</div>
       </td>
       <td class="px-4 py-4 text-sm text-gray-900">${formatBpm(
@@ -324,6 +343,7 @@ const renderPatientList = () => {
   updateSelectedPatientBanner();
 };
 
+// Populates the weekly summary widgets for the selected patient.
 const renderPatientSummary = () => {
   if (!summaryContent || !summaryEmptyState || !frequencySelect) return;
   const patient = getSelectedPatientRecord();
@@ -349,6 +369,7 @@ const renderPatientSummary = () => {
   frequencySelect.value = optionExists ? freqValue : "30";
 };
 
+// Destroys any existing trend charts before redrawing them.
 const destroyCharts = () => {
   hrChartInstance?.destroy();
   spo2ChartInstance?.destroy();
@@ -356,6 +377,7 @@ const destroyCharts = () => {
   spo2ChartInstance = null;
 };
 
+// Builds the per-day trend charts and supporting stats for the active patient.
 const renderPatientDaily = () => {
   if (
     !dailyContent ||
@@ -364,8 +386,9 @@ const renderPatientDaily = () => {
     !hrMaxText ||
     !spo2MinText ||
     !spo2MaxText
-  )
+  ) {
     return;
+  }
   const patient = getSelectedPatientRecord();
 
   if (!patient) {
@@ -379,7 +402,9 @@ const renderPatientDaily = () => {
   dailyEmptyState.classList.add("hidden");
 
   const metrics = patient.dailyMetrics || fallbackDailyData;
-  const labels = metrics.labels?.length ? metrics.labels : fallbackDailyData.labels;
+  const labels = metrics.labels?.length
+    ? metrics.labels
+    : fallbackDailyData.labels;
   const hrData = metrics.hr?.length ? metrics.hr : fallbackDailyData.hr;
   const spo2Data = metrics.spo2?.length ? metrics.spo2 : fallbackDailyData.spo2;
 
@@ -439,6 +464,7 @@ const renderPatientDaily = () => {
   }
 };
 
+// Sets the selected patient and refreshes all dependent views.
 const handlePatientSelection = (patientId) => {
   if (!patientId || !currentPhysician) return;
   selectedPatientId = patientId;
@@ -450,6 +476,7 @@ const handlePatientSelection = (patientId) => {
   setPortalView("patient-summary-view");
 };
 
+// Handles measurement frequency updates submitted by the physician.
 const handleFrequencyUpdate = (event) => {
   event.preventDefault();
   if (!selectedPatientId) {
@@ -471,6 +498,7 @@ const handleFrequencyUpdate = (event) => {
   alert("Measurement frequency updated for this patient.");
 };
 
+// Validates and stores a brand-new physician account in local storage.
 const handlePhysicianRegister = (event) => {
   event.preventDefault();
   clearRegisterMessages();
@@ -524,6 +552,7 @@ const handlePhysicianRegister = (event) => {
   }, 1600);
 };
 
+// Authenticates a physician and launches the portal UI.
 const handlePhysicianLogin = (event) => {
   event.preventDefault();
   loginError?.classList.add("hidden");
@@ -532,9 +561,7 @@ const handlePhysicianLogin = (event) => {
     .getElementById("physician-login-email")
     .value.trim()
     .toLowerCase();
-  const password = document
-    .getElementById("physician-login-password")
-    .value;
+  const password = document.getElementById("physician-login-password").value;
 
   const physicians = getStoredPhysicians();
   const physician = physicians.find(
@@ -565,6 +592,7 @@ const handlePhysicianLogin = (event) => {
   setPortalView("patient-list-view");
 };
 
+// Restores a prior physician session if a token exists.
 const attemptSessionLogin = () => {
   const storedId = localStorage.getItem(PHYSICIAN_SESSION_KEY);
   if (!storedId) return;
@@ -588,6 +616,7 @@ const attemptSessionLogin = () => {
   setPortalView("patient-list-view");
 };
 
+// Logs out the physician and resets portal state.
 const handleLogout = () => {
   currentPhysician = null;
   selectedPatientId = null;
