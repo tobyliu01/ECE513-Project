@@ -48,3 +48,7 @@ The password should
 
 1. be at least 8-digit long, and
 2. contains at least 1 lowercase letter, 1 uppercase letter, and 1 digit
+
+## Demo Video
+
+The video is included in this repo: `demo.mp4`.
