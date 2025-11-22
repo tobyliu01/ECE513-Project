@@ -31,7 +31,7 @@ const bootstrapPhysicianPortal = async () => {
     selectedPatientId = getPersistedSelection();
     setPatients(patientsRes.data || []);
     if (selectedPatientId) {
-      await loadDailyMetrics(selectedPatientId); // 第 5 步会实现
+      await loadDailyMetrics(selectedPatientId);
     }
 
     loginSection?.classList.add("hidden");
@@ -55,7 +55,6 @@ const attemptTokenLogin = async () => {
   }
 };
 
-
 const handlePhysicianLogout = () => {
   setPhysicianToken(null);
   currentPhysician = null;
@@ -66,7 +65,6 @@ const handlePhysicianLogout = () => {
   portalSection?.classList.add("hidden");
   loginSection?.classList.remove("hidden");
 };
-
 
 const setPhysicianToken = (token) => {
   physicianToken = token;
@@ -98,8 +96,6 @@ const apiRequest = async (path, { method = "GET", body } = {}) => {
   }
   return payload;
 };
-
-
 
 const loginSection = document.getElementById("physician-auth");
 const portalSection = document.getElementById("physician-app");
@@ -244,7 +240,6 @@ const switchAuthTab = (tab) => {
   clearRegisterMessages();
 };
 
-
 // Formats a BPM value for display, handling missing data.
 const formatBpm = (value) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "-- bpm";
@@ -256,7 +251,6 @@ const formatFrequency = (value) => {
   if (!value) return "User default";
   return `${value} min`;
 };
-
 
 const getPersistedSelection = () =>
   localStorage.getItem(SELECTED_PATIENT_KEY) || null;
@@ -289,7 +283,6 @@ const getSelectedPatientRecord = () =>
   physicianPatients.find((p) => p.patientId === selectedPatientId) || null;
 
 selectedPatientId = getPersistedSelection();
-
 
 // Handles view switching in the physician portal sidebar.
 const setPortalView = (viewId) => {
@@ -435,7 +428,6 @@ const destroyCharts = () => {
   spo2ChartInstance = null;
 };
 
-
 const loadDailyMetrics = async (patientId, date = new Date()) => {
   if (!patientId) return;
   const isoDate = date.toISOString().split("T")[0];
@@ -444,9 +436,7 @@ const loadDailyMetrics = async (patientId, date = new Date()) => {
     const res = await apiRequest(
       `/physicians/patients/${patientId}/daily?date=${isoDate}`
     );
-    const patient = physicianPatients.find(
-      (p) => p.patientId === patientId
-    );
+    const patient = physicianPatients.find((p) => p.patientId === patientId);
     if (patient) {
       patient.dailyMetrics = res.data || { labels: [], hr: [], spo2: [] };
     }
@@ -455,7 +445,6 @@ const loadDailyMetrics = async (patientId, date = new Date()) => {
     throw err;
   }
 };
-
 
 // Builds the per-day trend charts and supporting stats for the active patient.
 const renderPatientDaily = () => {
@@ -544,7 +533,6 @@ const renderPatientDaily = () => {
   }
 };
 
-
 // Handles measurement frequency updates submitted by the physician.
 const handleFrequencyUpdate = async (event) => {
   event.preventDefault();
@@ -560,17 +548,14 @@ const handleFrequencyUpdate = async (event) => {
   }
 
   try {
-    await apiRequest(
-      `/physicians/patients/${selectedPatientId}/frequency`,
-      {
-        method: "PUT",
-        body: { frequency: newFrequency },
-      }
-    );
+    await apiRequest(`/physicians/patients/${selectedPatientId}/frequency`, {
+      method: "PUT",
+      body: { frequency: newFrequency },
+    });
 
     const patient = getSelectedPatientRecord();
     if (patient) {
-       patient.measurementFrequency = newFrequency;
+      patient.measurementFrequency = newFrequency;
     }
 
     renderPatientList();
@@ -580,8 +565,6 @@ const handleFrequencyUpdate = async (event) => {
     alert(err.message || "Unable to update frequency.");
   }
 };
-
-
 
 // Validates and stores a brand-new physician account in local storage.
 const handlePhysicianRegister = async (event) => {
@@ -622,7 +605,6 @@ const handlePhysicianRegister = async (event) => {
   }
 };
 
-
 // Authenticates a physician and launches the portal UI.
 const handlePhysicianLogin = async (event) => {
   event.preventDefault();
@@ -660,7 +642,6 @@ patientRows?.addEventListener("click", async (event) => {
 
   const patientId = button.dataset.patientId;
   if (!patientId || patientId === selectedPatientId) {
-    // 已选中直接跳转视图即可
     setPortalView("patient-summary-view");
     return;
   }
@@ -669,7 +650,7 @@ patientRows?.addEventListener("click", async (event) => {
   persistSelectedPatient();
 
   try {
-    await loadDailyMetrics(patientId); // 第 5 步会实现
+    await loadDailyMetrics(patientId);
   } catch (err) {
     console.warn("Failed to load daily metrics:", err.message);
   }
@@ -680,7 +661,6 @@ patientRows?.addEventListener("click", async (event) => {
   updateSelectedPatientBanner();
   setPortalView("patient-summary-view");
 });
-
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {

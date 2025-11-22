@@ -63,16 +63,6 @@ const apiRequest = async (
 };
 
 // Normalizes the backend user payload into the shape expected by the UI.
-// const mapUser = (raw) => ({
-//   id: raw.id,
-//   email: raw.email,
-//   name: raw.name,
-//   settings: {
-//     frequency: raw.config?.frequency ?? 30,
-//     startTime: raw.config?.startTime ?? "08:00",
-//     endTime: raw.config?.endTime ?? "22:00",
-//   },
-// });
 const mapUser = (raw) => ({
   id: raw.id,
   email: raw.email,
@@ -957,11 +947,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   accountSettingsForm.addEventListener("submit", handleSaveAccount);
   measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
-  // if (physicianSelectionForm) {
-  //   physicianSelectionForm.addEventListener("submit", handlePhysicianSelection);
-  // }
   if (physicianSelectionForm) {
     physicianSelectionForm.addEventListener("submit", handlePhysicianSelection);
-    renderPhysicianOptions(); // ← 就写在这里
+    renderPhysicianOptions();
   }
 });
