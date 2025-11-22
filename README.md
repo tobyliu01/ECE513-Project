@@ -40,7 +40,7 @@ Start the session.
 npm start
 ```
 
-The application runs on `http://${PUBLIC_IP_ADDRESS}:3000`.
+The application runs on <http://54.177.57.86:3000/>.
 
 ## Password Requirement
 
