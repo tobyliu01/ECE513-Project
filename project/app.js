@@ -9,6 +9,8 @@ const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const accountRoutes = require("./routes/account");
 const measurementRoutes = require("./routes/measurements");
+const physicianRoutes = require("./routes/physicians");
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +31,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api/auth", authRoutes);
 app.use("/api/account", accountRoutes);
 app.use("/api/measurements", measurementRoutes);
+app.use("/api/physicians", physicianRoutes);
+
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app.html"));

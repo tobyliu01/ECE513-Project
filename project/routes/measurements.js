@@ -1,5 +1,6 @@
 // Routes for ingesting and querying heart-rate/SpO2 measurements.
 const express = require("express");
+const User = require("../models/User");
 const router = express.Router();
 const Measurement = require("../models/Measurement");
 const Device = require("../models/Device");
@@ -20,8 +21,9 @@ const formatDaily = (docs) => ({
 // POST /api/measurements – device ingests a new measurement using API key.
 router.post("/", protectDevice, async (req, res) => {
   try {
-    const { deviceId, heartRate, spo2 } = req.body;
-
+    // const { deviceId, heartRate, spo2 } = req.body;
+    const { deviceId, heartRate, spo2, userId, deviceName } = req.body;
+  
     if (!deviceId || heartRate === undefined || spo2 === undefined) {
       return res
         .status(400)
@@ -31,24 +33,56 @@ router.post("/", protectDevice, async (req, res) => {
         });
     }
 
-    const device = await Device.findOne({ deviceId });
-    if (!device) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Device not registered" });
-    }
+
+    const ensureDeviceRegistered = async () => {
+      if (!userId) {
+        const error = new Error(
+          "Device not registered. Provide userId to auto-register this device."
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        const error = new Error("User not found for userId");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      return Device.create({
+        user: user._id,
+        deviceId,
+        name: deviceName || `Device ${deviceId}`,
+      });
+    };
+
+    // const device = await Device.findOne({ deviceId });
+    // if (!device) {
+    //   return res
+    //     .status(404)
+    //     .json({ success: false, message: "Device not registered" });
+    // }
+    const device =
+      (await Device.findOne({ deviceId })) || (await ensureDeviceRegistered());
+
 
     const measurement = await Measurement.create({
       device: device._id,
       user: device.user,
       heartRate,
       spo2,
-      timestamp: new Date(),
+      timestamp: new Date(Date.now() - 7 * 60 * 60 * 1000),
     });
 
     res.status(201).json({ success: true, data: measurement });
   } catch (err) {
     console.error(err);
+    if (err.statusCode) {
+      return res
+        .status(err.statusCode)
+        .json({ success: false, message: err.message });
+    }
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });

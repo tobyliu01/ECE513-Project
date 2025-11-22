@@ -1,15 +1,23 @@
 // prepare for backend API calls and app state management
 const API_BASE_URL = "/api";
 const TOKEN_KEY = "heartTrackToken";
-const PHYSICIANS_STORAGE_KEY = "heartTrackPhysicians";
-const PATIENT_ASSIGNMENTS_KEY = "heartTrackPhysicianAssignments";
 
 let authToken = null;
 let currentUser = null;
 let currentDevices = [];
 let weeklyMetrics = { avg: 0, min: 0, max: 0 };
 let dailyMetrics = { labels: [], hr: [], spo2: [] };
-let selectedDate = new Date();
+let selectedDate = new Date(Date.now() - 7 * 60 * 60 * 1000);
+
+let physicianDirectory = [];
+const loadPhysicians = async () => {
+  const res = await apiRequest("/physicians/public", {
+    method: "GET",
+    skipAuth: true,
+  });
+  physicianDirectory = res.data || [];
+  return physicianDirectory;
+};
 
 // Persists the latest JWT token state so API calls stay authenticated.
 const setAuthToken = (token) => {
@@ -19,31 +27,6 @@ const setAuthToken = (token) => {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
-};
-
-// Reads the locally stored physician registry for assignment dropdowns.
-const readPhysicians = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PHYSICIANS_STORAGE_KEY)) || [];
-  } catch (err) {
-    console.warn("Failed to parse physicians storage:", err);
-    return [];
-  }
-};
-
-// Retrieves physician assignment metadata keyed by patient id.
-const readPatientAssignments = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {};
-  } catch (err) {
-    console.warn("Failed to parse physician assignments:", err);
-    return {};
-  }
-};
-
-// Saves the entire physician assignment object back to local storage.
-const writePatientAssignments = (payload) => {
-  localStorage.setItem(PATIENT_ASSIGNMENTS_KEY, JSON.stringify(payload));
 };
 
 // Small wrapper around fetch that injects auth headers and JSON parsing.
@@ -80,6 +63,16 @@ const apiRequest = async (
 };
 
 // Normalizes the backend user payload into the shape expected by the UI.
+// const mapUser = (raw) => ({
+//   id: raw.id,
+//   email: raw.email,
+//   name: raw.name,
+//   settings: {
+//     frequency: raw.config?.frequency ?? 30,
+//     startTime: raw.config?.startTime ?? "08:00",
+//     endTime: raw.config?.endTime ?? "22:00",
+//   },
+// });
 const mapUser = (raw) => ({
   id: raw.id,
   email: raw.email,
@@ -89,6 +82,16 @@ const mapUser = (raw) => ({
     startTime: raw.config?.startTime ?? "08:00",
     endTime: raw.config?.endTime ?? "22:00",
   },
+  physician: raw.physician
+    ? {
+        id: raw.physician.id,
+        name: raw.physician.name,
+        email: raw.physician.email,
+        specialty: raw.physician.specialty,
+        practiceName: raw.physician.practiceName,
+        assignedAt: raw.physician.assignedAt,
+      }
+    : null,
 });
 
 // Converts a device document into the simplified UI representation.
@@ -104,7 +107,7 @@ const resetAppState = () => {
   currentDevices = [];
   weeklyMetrics = { avg: 0, min: 0, max: 0 };
   dailyMetrics = { labels: [], hr: [], spo2: [] };
-  selectedDate = new Date();
+  selectedDate = new Date(Date.now() - 7 * 60 * 60 * 1000);
 };
 
 // Fetches user profile, devices, and metrics before showing the dashboard.
@@ -127,7 +130,7 @@ const bootstrapApp = async (seedUser) => {
   authContainer.classList.add("hidden");
   appContainer.classList.remove("hidden");
 
-  syncPatientAssignmentData();
+  // syncPatientAssignmentData();
   initializeApp();
 };
 
@@ -734,18 +737,10 @@ function loadSettingsForms() {
   renderPhysicianOptions();
 }
 
-// Fetches the current user's physician assignment record.
-const getCurrentAssignment = () => {
-  if (!currentUser) return null;
-  const assignments = readPatientAssignments();
-  return assignments[currentUser.id] || null;
-};
-
-// Builds the physician assignment dropdown and status label.
-function renderPhysicianOptions() {
+async function renderPhysicianOptions() {
   if (!physicianSelect || !physicianStatusText) return;
 
-  const physicians = readPhysicians();
+  const physicians = await loadPhysicians();
   const currentAssignment = getCurrentAssignment();
 
   physicianSelect.innerHTML =
@@ -755,7 +750,7 @@ function renderPhysicianOptions() {
     const option = document.createElement("option");
     option.value = doctor.id;
     option.textContent = `${doctor.name} (${doctor.email})`;
-    if (currentAssignment?.physicianId === doctor.id) {
+    if (currentAssignment?.id === doctor.id) {
       option.selected = true;
     }
     physicianSelect.appendChild(option);
@@ -766,82 +761,40 @@ function renderPhysicianOptions() {
   if (!physicians.length) {
     physicianStatusText.textContent =
       "No physicians registered yet. Share the link below.";
-  } else if (currentAssignment?.physicianId) {
-    const selectedDoctor =
-      physicians.find((doc) => doc.id === currentAssignment.physicianId) ||
-      null;
-    physicianStatusText.textContent = selectedDoctor
-      ? `${selectedDoctor.name} (${selectedDoctor.email})`
-      : "Assigned physician not found.";
+  } else if (currentAssignment) {
+    physicianStatusText.textContent = `${currentAssignment.name} (${currentAssignment.email})`;
   } else {
     physicianStatusText.textContent = "No physician selected";
   }
 }
 
 // Pushes the latest user metrics/settings into their physician record.
-function syncPatientAssignmentData() {
-  if (!currentUser) return;
-  const assignments = readPatientAssignments();
-  const existing = assignments[currentUser.id];
-  if (!existing) return;
-
-  assignments[currentUser.id] = {
-    ...existing,
-    patientId: currentUser.id,
-    patientName: currentUser.name,
-    patientEmail: currentUser.email,
-    weeklyMetrics,
-    dailyMetrics,
-    measurementFrequency: currentUser.settings.frequency,
-    updatedAt: new Date().toISOString(),
-  };
-
-  writePatientAssignments(assignments);
-}
-
-// Handles saving/clearing a physician selection from settings.
-function handlePhysicianSelection(e) {
+async function handlePhysicianSelection(e) {
   e.preventDefault();
   if (!currentUser || !physicianSelect) return;
 
   const selectedPhysicianId = physicianSelect.value;
-  const physicians = readPhysicians();
-  const assignments = readPatientAssignments();
+  console.log("selected physician:", selectedPhysicianId);
+  console.log("authToken:", authToken);
 
-  if (!selectedPhysicianId) {
-    delete assignments[currentUser.id];
-    writePatientAssignments(assignments);
-    renderPhysicianOptions();
-    alert("Physician assignment cleared.");
-    return;
+  try {
+    const response = selectedPhysicianId
+      ? await apiRequest("/account/physician", {
+          method: "PUT",
+          body: { physicianId: selectedPhysicianId },
+        })
+      : await apiRequest("/account/physician", { method: "DELETE" });
+
+    currentUser = mapUser(response.data);
+    await renderPhysicianOptions();
+    alert(
+      selectedPhysicianId
+        ? "Physician selection saved."
+        : "Physician assignment cleared."
+    );
+  } catch (err) {
+    alert(err.message || "Failed to update physician assignment.");
   }
-
-  const selectedPhysician = physicians.find(
-    (doctor) => doctor.id === selectedPhysicianId
-  );
-
-  if (!selectedPhysician) {
-    alert("Selected physician was not found. Please refresh the list.");
-    renderPhysicianOptions();
-    return;
-  }
-
-  assignments[currentUser.id] = {
-    physicianId: selectedPhysician.id,
-    physicianName: selectedPhysician.name,
-    physicianEmail: selectedPhysician.email,
-    patientId: currentUser.id,
-    patientName: currentUser.name,
-    patientEmail: currentUser.email,
-    weeklyMetrics,
-    dailyMetrics,
-    measurementFrequency: currentUser.settings.frequency,
-    updatedAt: new Date().toISOString(),
-  };
-
-  writePatientAssignments(assignments);
-  renderPhysicianOptions();
-  alert("Physician selection saved.");
 }
 
 // Handle button of saving account profile
@@ -910,7 +863,7 @@ async function handleSaveMeasurements(e) {
       endTime: response.data.endTime,
     };
 
-    syncPatientAssignmentData();
+    // syncPatientAssignmentData();
 
     alert("Measurement settings saved!");
   } catch (err) {
@@ -1004,7 +957,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   accountSettingsForm.addEventListener("submit", handleSaveAccount);
   measurementSettingsForm.addEventListener("submit", handleSaveMeasurements);
+  // if (physicianSelectionForm) {
+  //   physicianSelectionForm.addEventListener("submit", handlePhysicianSelection);
+  // }
   if (physicianSelectionForm) {
     physicianSelectionForm.addEventListener("submit", handlePhysicianSelection);
+    renderPhysicianOptions(); // ← 就写在这里
   }
 });

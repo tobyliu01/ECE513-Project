@@ -1,12 +1,105 @@
-const PHYSICIANS_STORAGE_KEY = "heartTrackPhysicians";
-const PATIENT_ASSIGNMENTS_KEY = "heartTrackPhysicianAssignments";
-const PHYSICIAN_SESSION_KEY = "heartTrackPhysicianSession";
+const API_BASE_URL = "/api";
+const PHYSICIAN_TOKEN_KEY = "heartTrackPhysicianToken";
 const SELECTED_PATIENT_KEY = "heartTrackSelectedPatient";
 
+let physicianToken = null;
 let currentPhysician = null;
+let physicianPatients = [];
 let selectedPatientId = null;
 let hrChartInstance = null;
 let spo2ChartInstance = null;
+
+const mapPhysician = (raw) => ({
+  id: raw.id || raw._id,
+  name: raw.name,
+  email: raw.email,
+  specialty: raw.specialty || "",
+  practiceName: raw.practiceName || "",
+});
+
+const bootstrapPhysicianPortal = async () => {
+  try {
+    const [meRes, patientsRes] = await Promise.all([
+      apiRequest("/physicians/me"),
+      apiRequest("/physicians/patients"),
+    ]);
+
+    currentPhysician = mapPhysician(meRes.data);
+    physicianNameDisplay.textContent = currentPhysician.name;
+    physicianEmailDisplay.textContent = currentPhysician.email;
+
+    selectedPatientId = getPersistedSelection();
+    setPatients(patientsRes.data || []);
+    if (selectedPatientId) {
+      await loadDailyMetrics(selectedPatientId); // 第 5 步会实现
+    }
+
+    loginSection?.classList.add("hidden");
+    portalSection?.classList.remove("hidden");
+    setPortalView("patient-list-view");
+  } catch (err) {
+    alert(err.message || "Failed to initialize physician portal.");
+    handlePhysicianLogout();
+  }
+};
+
+const attemptTokenLogin = async () => {
+  const storedToken = localStorage.getItem(PHYSICIAN_TOKEN_KEY);
+  if (!storedToken) return;
+  setPhysicianToken(storedToken);
+  try {
+    await bootstrapPhysicianPortal();
+  } catch (err) {
+    console.warn("Failed to restore physician session:", err.message);
+    handlePhysicianLogout();
+  }
+};
+
+
+const handlePhysicianLogout = () => {
+  setPhysicianToken(null);
+  currentPhysician = null;
+  physicianPatients = [];
+  selectedPatientId = null;
+  persistSelectedPatient();
+  destroyCharts();
+  portalSection?.classList.add("hidden");
+  loginSection?.classList.remove("hidden");
+};
+
+
+const setPhysicianToken = (token) => {
+  physicianToken = token;
+  if (token) {
+    localStorage.setItem(PHYSICIAN_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(PHYSICIAN_TOKEN_KEY);
+  }
+};
+
+const apiRequest = async (path, { method = "GET", body } = {}) => {
+  const headers = { "Content-Type": "application/json" };
+  if (physicianToken) {
+    headers.Authorization = `Bearer ${physicianToken}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) {
+    const err = new Error(payload.message || "Request failed");
+    err.status = res.status;
+    err.payload = payload;
+    throw err;
+  }
+  return payload;
+};
+
+
 
 const loginSection = document.getElementById("physician-auth");
 const portalSection = document.getElementById("physician-app");
@@ -151,66 +244,6 @@ const switchAuthTab = (tab) => {
   clearRegisterMessages();
 };
 
-// Retrieves the locally stored physician roster for authentication.
-const getStoredPhysicians = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PHYSICIANS_STORAGE_KEY)) || [];
-  } catch (err) {
-    console.warn("Unable to parse physician storage:", err);
-    return [];
-  }
-};
-
-// Persists the entire physician list back into local storage.
-const savePhysicians = (payload) => {
-  localStorage.setItem(PHYSICIANS_STORAGE_KEY, JSON.stringify(payload));
-};
-
-// Reads the physician assignment map keyed by patient id.
-const getAssignments = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PATIENT_ASSIGNMENTS_KEY)) || {};
-  } catch (err) {
-    console.warn("Unable to parse patient assignments:", err);
-    return {};
-  }
-};
-
-// Saves an updated physician assignment map.
-const saveAssignments = (payload) => {
-  localStorage.setItem(PATIENT_ASSIGNMENTS_KEY, JSON.stringify(payload));
-};
-
-// Loads persisted mappings of physician ids to their selected patient.
-const getSelectedPatientMap = () => {
-  try {
-    return JSON.parse(localStorage.getItem(SELECTED_PATIENT_KEY)) || {};
-  } catch (err) {
-    console.warn("Unable to parse selected patient storage:", err);
-    return {};
-  }
-};
-
-// Writes the physician’s current patient selection back into storage.
-const persistSelectedPatient = () => {
-  if (!currentPhysician) return;
-  const map = getSelectedPatientMap();
-  if (selectedPatientId) {
-    map[currentPhysician.id] = selectedPatientId;
-  } else {
-    delete map[currentPhysician.id];
-  }
-  localStorage.setItem(SELECTED_PATIENT_KEY, JSON.stringify(map));
-};
-
-// Filters the assignment list down to patients owned by the logged-in physician.
-const getPatientsForPhysician = () => {
-  if (!currentPhysician) return [];
-  const assignments = getAssignments();
-  return Object.values(assignments).filter(
-    (entry) => entry.physicianId === currentPhysician.id
-  );
-};
 
 // Formats a BPM value for display, handling missing data.
 const formatBpm = (value) => {
@@ -224,14 +257,39 @@ const formatFrequency = (value) => {
   return `${value} min`;
 };
 
-// Fetches the full assignment record for the currently selected patient.
-const getSelectedPatientRecord = () => {
-  if (!selectedPatientId) return null;
-  const assignments = getAssignments();
-  const entry = assignments[selectedPatientId];
-  if (!entry || entry.physicianId !== currentPhysician?.id) return null;
-  return entry;
+
+const getPersistedSelection = () =>
+  localStorage.getItem(SELECTED_PATIENT_KEY) || null;
+
+const persistSelectedPatient = () => {
+  if (selectedPatientId) {
+    localStorage.setItem(SELECTED_PATIENT_KEY, selectedPatientId);
+  } else {
+    localStorage.removeItem(SELECTED_PATIENT_KEY);
+  }
 };
+
+const setPatients = (patients = []) => {
+  physicianPatients = patients;
+  if (
+    selectedPatientId &&
+    !physicianPatients.some((p) => p.patientId === selectedPatientId)
+  ) {
+    selectedPatientId = null;
+    persistSelectedPatient();
+  }
+  renderPatientList();
+  renderPatientSummary();
+  renderPatientDaily();
+};
+
+const getPatientsForPhysician = () => physicianPatients;
+
+const getSelectedPatientRecord = () =>
+  physicianPatients.find((p) => p.patientId === selectedPatientId) || null;
+
+selectedPatientId = getPersistedSelection();
+
 
 // Handles view switching in the physician portal sidebar.
 const setPortalView = (viewId) => {
@@ -377,6 +435,28 @@ const destroyCharts = () => {
   spo2ChartInstance = null;
 };
 
+
+const loadDailyMetrics = async (patientId, date = new Date()) => {
+  if (!patientId) return;
+  const isoDate = date.toISOString().split("T")[0];
+
+  try {
+    const res = await apiRequest(
+      `/physicians/patients/${patientId}/daily?date=${isoDate}`
+    );
+    const patient = physicianPatients.find(
+      (p) => p.patientId === patientId
+    );
+    if (patient) {
+      patient.dailyMetrics = res.data || { labels: [], hr: [], spo2: [] };
+    }
+  } catch (err) {
+    console.error("Failed to load daily metrics:", err);
+    throw err;
+  }
+};
+
+
 // Builds the per-day trend charts and supporting stats for the active patient.
 const renderPatientDaily = () => {
   if (
@@ -464,42 +544,47 @@ const renderPatientDaily = () => {
   }
 };
 
-// Sets the selected patient and refreshes all dependent views.
-const handlePatientSelection = (patientId) => {
-  if (!patientId || !currentPhysician) return;
-  selectedPatientId = patientId;
-  persistSelectedPatient();
-  updateSelectedPatientBanner();
-  renderPatientList();
-  renderPatientSummary();
-  renderPatientDaily();
-  setPortalView("patient-summary-view");
-};
 
 // Handles measurement frequency updates submitted by the physician.
-const handleFrequencyUpdate = (event) => {
+const handleFrequencyUpdate = async (event) => {
   event.preventDefault();
   if (!selectedPatientId) {
     alert("Select a patient before updating the measurement plan.");
     return;
   }
 
-  const assignments = getAssignments();
-  const entry = assignments[selectedPatientId];
-  if (!entry) {
-    alert("Patient record was not found.");
+  const newFrequency = Number(frequencySelect.value);
+  if (!newFrequency || Number.isNaN(newFrequency)) {
+    alert("Please enter a valid frequency.");
     return;
   }
 
-  entry.measurementFrequency = Number(frequencySelect.value);
-  assignments[selectedPatientId] = entry;
-  saveAssignments(assignments);
-  renderPatientList();
-  alert("Measurement frequency updated for this patient.");
+  try {
+    await apiRequest(
+      `/physicians/patients/${selectedPatientId}/frequency`,
+      {
+        method: "PUT",
+        body: { frequency: newFrequency },
+      }
+    );
+
+    const patient = getSelectedPatientRecord();
+    if (patient) {
+       patient.measurementFrequency = newFrequency;
+    }
+
+    renderPatientList();
+    renderPatientSummary();
+    alert("Measurement frequency updated.");
+  } catch (err) {
+    alert(err.message || "Unable to update frequency.");
+  }
 };
 
+
+
 // Validates and stores a brand-new physician account in local storage.
-const handlePhysicianRegister = (event) => {
+const handlePhysicianRegister = async (event) => {
   event.preventDefault();
   clearRegisterMessages();
 
@@ -509,51 +594,37 @@ const handlePhysicianRegister = (event) => {
   const confirmPassword = registerConfirmInput?.value;
 
   if (!name || !email || !password || !confirmPassword) {
-    showRegisterError("Please complete all fields.");
-    return;
+    return showRegisterError("Please complete all fields.");
   }
-
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showRegisterError("Please enter a valid email address.");
-    return;
+    return showRegisterError("Please enter a valid email address.");
   }
-
-  const passwordCheck = validatePhysicianPassword(password);
-  if (!passwordCheck.isValid) {
-    showRegisterError(passwordCheck.message);
-    return;
+  const validation = validatePhysicianPassword(password);
+  if (!validation.isValid) {
+    return showRegisterError(validation.message);
   }
-
   if (password !== confirmPassword) {
-    showRegisterError("Passwords do not match.");
-    return;
+    return showRegisterError("Passwords do not match.");
   }
 
-  const physicians = getStoredPhysicians();
-  if (physicians.some((doc) => doc.email === email)) {
-    showRegisterError("An account with this email already exists.");
-    return;
+  try {
+    const res = await apiRequest("/physicians/register", {
+      method: "POST",
+      body: { name, email, password },
+    });
+    setPhysicianToken(res.token);
+    currentPhysician = res.physician;
+    registerForm?.reset();
+    showRegisterSuccess("Account created! Redirecting...");
+    await bootstrapPhysicianPortal();
+  } catch (err) {
+    showRegisterError(err.message || "Registration failed.");
   }
-
-  physicians.push({
-    id: generatePhysicianId(),
-    name,
-    email,
-    password,
-    createdAt: new Date().toISOString(),
-  });
-
-  savePhysicians(physicians);
-  registerForm?.reset();
-  showRegisterSuccess("Registration successful! Please sign in.");
-  setTimeout(() => {
-    clearRegisterMessages();
-    switchAuthTab("login");
-  }, 1600);
 };
 
+
 // Authenticates a physician and launches the portal UI.
-const handlePhysicianLogin = (event) => {
+const handlePhysicianLogin = async (event) => {
   event.preventDefault();
   loginError?.classList.add("hidden");
 
@@ -563,74 +634,53 @@ const handlePhysicianLogin = (event) => {
     .toLowerCase();
   const password = document.getElementById("physician-login-password").value;
 
-  const physicians = getStoredPhysicians();
-  const physician = physicians.find(
-    (doc) => doc.email === email && doc.password === password
-  );
-
-  if (!physician) {
+  if (!email || !password) {
     loginError?.classList.remove("hidden");
+    loginError.textContent = "Please provide email and password.";
     return;
   }
 
-  currentPhysician = physician;
-  localStorage.setItem(PHYSICIAN_SESSION_KEY, physician.id);
-  loginSection?.classList.add("hidden");
-  portalSection?.classList.remove("hidden");
-  physicianNameDisplay.textContent = physician.name;
-  physicianEmailDisplay.textContent = physician.email;
-  const map = getSelectedPatientMap();
-  if (map[physician.id]) {
-    selectedPatientId = map[physician.id];
-  } else {
-    selectedPatientId = null;
+  try {
+    const res = await apiRequest("/physicians/login", {
+      method: "POST",
+      body: { email, password },
+    });
+    setPhysicianToken(res.token);
+    currentPhysician = res.physician;
+    await bootstrapPhysicianPortal();
+  } catch (err) {
+    loginError?.classList.remove("hidden");
+    loginError.textContent = err.message || "Invalid credentials.";
   }
-  renderPatientList();
-  updateSelectedPatientBanner();
-  renderPatientSummary();
-  renderPatientDaily();
-  setPortalView("patient-list-view");
 };
 
-// Restores a prior physician session if a token exists.
-const attemptSessionLogin = () => {
-  const storedId = localStorage.getItem(PHYSICIAN_SESSION_KEY);
-  if (!storedId) return;
-  const physicians = getStoredPhysicians();
-  const physician = physicians.find((doc) => doc.id === storedId);
-  if (!physician) {
-    localStorage.removeItem(PHYSICIAN_SESSION_KEY);
-    return;
-  }
-  currentPhysician = physician;
-  loginSection?.classList.add("hidden");
-  portalSection?.classList.remove("hidden");
-  physicianNameDisplay.textContent = physician.name;
-  physicianEmailDisplay.textContent = physician.email;
-  const map = getSelectedPatientMap();
-  selectedPatientId = map[physician.id] || null;
-  renderPatientList();
-  updateSelectedPatientBanner();
-  renderPatientSummary();
-  renderPatientDaily();
-  setPortalView("patient-list-view");
-};
-
-// Logs out the physician and resets portal state.
-const handleLogout = () => {
-  currentPhysician = null;
-  selectedPatientId = null;
-  destroyCharts();
-  portalSection?.classList.add("hidden");
-  loginSection?.classList.remove("hidden");
-  localStorage.removeItem(PHYSICIAN_SESSION_KEY);
-};
-
-patientRows?.addEventListener("click", (event) => {
+patientRows?.addEventListener("click", async (event) => {
   const button = event.target.closest(".select-patient-btn");
   if (!button) return;
-  handlePatientSelection(button.dataset.patientId);
+
+  const patientId = button.dataset.patientId;
+  if (!patientId || patientId === selectedPatientId) {
+    // 已选中直接跳转视图即可
+    setPortalView("patient-summary-view");
+    return;
+  }
+
+  selectedPatientId = patientId;
+  persistSelectedPatient();
+
+  try {
+    await loadDailyMetrics(patientId); // 第 5 步会实现
+  } catch (err) {
+    console.warn("Failed to load daily metrics:", err.message);
+  }
+
+  renderPatientList();
+  renderPatientSummary();
+  renderPatientDaily();
+  updateSelectedPatientBanner();
+  setPortalView("patient-summary-view");
 });
+
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -642,7 +692,7 @@ navButtons.forEach((button) => {
 frequencyForm?.addEventListener("submit", handleFrequencyUpdate);
 loginForm?.addEventListener("submit", handlePhysicianLogin);
 registerForm?.addEventListener("submit", handlePhysicianRegister);
-logoutButton?.addEventListener("click", handleLogout);
+logoutButton?.addEventListener("click", handlePhysicianLogout);
 loginTabButton?.addEventListener("click", () => switchAuthTab("login"));
 registerTabButton?.addEventListener("click", () => switchAuthTab("register"));
 
@@ -656,13 +706,4 @@ window.addEventListener("hashchange", () => {
     switchAuthTab("login");
   }
 });
-
-window.addEventListener("storage", (event) => {
-  if (event.key !== PATIENT_ASSIGNMENTS_KEY || !currentPhysician) return;
-  renderPatientList();
-  updateSelectedPatientBanner();
-  renderPatientSummary();
-  renderPatientDaily();
-});
-
-attemptSessionLogin();
+attemptTokenLogin();

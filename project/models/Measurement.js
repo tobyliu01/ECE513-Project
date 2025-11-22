@@ -25,8 +25,15 @@ const MeasurementSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     default: Date.now,
+    // default: () => moment().tz("America/Los_Angeles").toDate(),
     required: true,
   },
+  // timestamp: {
+  //   type: Date,
+  //   default: () => new Date(Date.now() - 7 * 60 * 60 * 1000),
+  //   required: true,
+  // },
 });
+
 
 module.exports = mongoose.model("Measurement", MeasurementSchema);

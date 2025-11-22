@@ -167,4 +167,81 @@ router.delete("/devices/:id", async (req, res) => {
   }
 });
 
+
+const Physician = require("../models/Physician");
+// GET /api/account/physician 
+router.get("/physician", async (req, res) => {
+  try {
+    const payload = await buildUserPayload(req.user.id);
+    res.status(200).json({ success: true, data: payload.physician });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+async function syncPhysicianAssignments(user, nextPhysicianId) {
+  if (user.physician && (!nextPhysicianId || user.physician.toString() !== nextPhysicianId.toString())) {
+    await Physician.findByIdAndUpdate(user.physician, {
+      $pull: { patients: user._id },
+    });
+  }
+  if (nextPhysicianId) {
+    await Physician.findByIdAndUpdate(nextPhysicianId, {
+      $addToSet: { patients: user._id },
+    });
+  }
+}
+
+// PUT /api/account/physician 
+router.put("/physician", async (req, res) => {
+  try {
+    const { physicianId } = req.body;
+    if (!physicianId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please provide physicianId" });
+    }
+
+    const physician = await Physician.findById(physicianId);
+    console.log("[PUT /account/physician] user:", req.user.id, "physicianId:", physicianId);
+
+    if (!physician) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Physician not found" });
+    }
+
+    const user = await User.findById(req.user.id);
+    await syncPhysicianAssignments(user, physician._id);
+    user.physician = physician._id;
+    user.physicianAssignedAt = new Date();
+    await user.save();
+
+    const payload = await buildUserPayload(user._id);
+    res.status(200).json({ success: true, data: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+// DELETE /api/account/physician
+router.delete("/physician", async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    await syncPhysicianAssignments(user, null);
+    user.physician = null;
+    user.physicianAssignedAt = null;
+    await user.save();
+
+    const payload = await buildUserPayload(user._id);
+    res.status(200).json({ success: true, data: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+
 module.exports = router;
