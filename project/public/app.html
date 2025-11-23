@@ -242,8 +242,7 @@
 
                     <div id="weekly-view-content">
                         <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                            <!-- Past 7 Days (Oct 22 - Oct 28, 2025) -->
-                            Past 7 Days (Nov 14 - Nov 21, 2025)
+                            <span id="weekly-date-range">Past 7 Days</span>
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="bg-white p-6 rounded-lg shadow-lg">
@@ -280,7 +279,7 @@
                         <div class="flex items-center mb-4">
                             <label for="daily-date-picker" class="text-xl font-semibold text-gray-700 mr-4">Select
                                 Day:</label>
-                            <input type="date" id="daily-date-picker" value="2025-10-28"
+                            <input type="date" id="daily-date-picker"
                                 class="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" />
                         </div>
 
@@ -444,7 +443,8 @@
                         </div>
                         <p class="text-sm text-gray-600 mb-4">
                             Current physician:
-                            <span id="physician-status-text" class="font-medium text-gray-800">No physician selected</span>
+                            <span id="physician-status-text" class="font-medium text-gray-800">No physician
+                                selected</span>
                         </p>
                         <form id="physician-selection-form" class="space-y-4">
                             <div>

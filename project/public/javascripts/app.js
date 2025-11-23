@@ -102,7 +102,7 @@ const resetAppState = () => {
 
 // Fetches user profile, devices, and metrics before showing the dashboard.
 const bootstrapApp = async (seedUser) => {
-  const today = selectedDate.toISOString().split("T")[0];
+  const today = formatLocalDateInputValue(selectedDate);
 
   const [userRes, deviceRes, weeklyRes, dailyRes] = await Promise.all([
     seedUser ? Promise.resolve({ data: seedUser }) : apiRequest("/account/me"),
@@ -181,6 +181,12 @@ const weeklyTabButton = document.getElementById("weekly-tab-button");
 const dailyTabButton = document.getElementById("daily-tab-button");
 const weeklyViewContent = document.getElementById("weekly-view-content");
 const dailyViewContent = document.getElementById("daily-view-content");
+const dailyDatePicker = document.getElementById("daily-date-picker");
+const weeklyDateRangeText = document.getElementById("weekly-date-range");
+
+if (dailyDatePicker) {
+  dailyDatePicker.value = formatLocalDateInputValue(selectedDate);
+}
 
 // Device list fields
 const deviceList = document.getElementById("device-list");
@@ -460,11 +466,46 @@ function switchDashboardTab(tab) {
   }
 }
 
+// Build the "Past 7 Days" date range in the user's local time zone.
+function formatWeeklyDateRange(now = new Date()) {
+  const end = new Date(Date.now() - 7 * 60 * 60 * 1000);
+  const start = new Date(Date.now() - 7 * 60 * 60 * 1000);
+  start.setDate(end.getDate() - 6);
+
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startFormatter = new Intl.DateTimeFormat([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const endFormatter = new Intl.DateTimeFormat([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return `Past 7 Days (${startFormatter.format(start)} - ${endFormatter.format(
+    end
+  )})`;
+}
+
+// Returns the default value of the date picker.
+function formatLocalDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Load user's weekly summary
 function loadWeeklySummary() {
   const avg = Math.round(weeklyMetrics.avg || 0);
   const min = Math.round(weeklyMetrics.min || 0);
   const max = Math.round(weeklyMetrics.max || 0);
+
+  if (weeklyDateRangeText) {
+    weeklyDateRangeText.textContent = formatWeeklyDateRange();
+  }
 
   document.getElementById(
     "weekly-avg-hr"
@@ -475,6 +516,18 @@ function loadWeeklySummary() {
   document.getElementById(
     "weekly-max-hr"
   ).innerHTML = `${max} <span class="text-lg font-medium text-gray-600">bpm</span>`;
+}
+
+// Load user's daily metrics for the provided date and refresh charts.
+async function loadDailyMetricsFor(dateString) {
+  const targetDate = dateString || formatLocalDateInputValue(selectedDate);
+  const response = await apiRequest(`/measurements/daily?date=${targetDate}`);
+  dailyMetrics = response.data || { labels: [], hr: [], spo2: [] };
+  selectedDate = new Date(`${targetDate}T00:00:00`);
+  if (dailyDatePicker && dailyDatePicker.value !== targetDate) {
+    dailyDatePicker.value = targetDate;
+  }
+  initCharts();
 }
 
 // Initialize the data chart
@@ -547,6 +600,22 @@ function initCharts() {
     },
     options: { responsive: true, scales: { y: { beginAtZero: false } } },
   });
+}
+
+async function handleDailyDateChange(e) {
+  const newDate = e.target.value;
+  if (!newDate) {
+    e.target.value = formatLocalDateInputValue(selectedDate);
+    return;
+  }
+
+  try {
+    await loadDailyMetricsFor(newDate);
+  } catch (err) {
+    console.error("Failed to load measurements for", newDate, err);
+    alert(err.message || "Failed to load measurements for selected date.");
+    e.target.value = formatLocalDateInputValue(selectedDate);
+  }
 }
 
 // Render device list
@@ -925,6 +994,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   weeklyTabButton.addEventListener("click", () => switchDashboardTab("weekly"));
   dailyTabButton.addEventListener("click", () => switchDashboardTab("daily"));
+  if (dailyDatePicker) {
+    dailyDatePicker.addEventListener("change", handleDailyDateChange);
+  }
   addDeviceForm.addEventListener("submit", handleAddDevice);
 
   // Updated device list listener
