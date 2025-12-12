@@ -276,11 +276,16 @@
                             Select a patient to review their detailed daily measurements.
                         </div>
                         <div id="patient-daily-content" class="hidden space-y-6">
+                            <div class="flex items-center mb-4">
+                                <label for="physician-daily-date-picker" class="text-lg font-semibold text-gray-900 mr-3">Select
+                                    Day:</label>
+                                <input type="date" id="physician-daily-date-picker"
+                                    class="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500">
+                            </div>
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <h3 class="text-lg font-semibold text-gray-900">Heart Rate Trend</h3>
-                                        <span class="text-sm text-gray-500">Today</span>
                                     </div>
                                     <canvas id="physician-hr-chart" height="160"></canvas>
                                     <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -297,7 +302,6 @@
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <h3 class="text-lg font-semibold text-gray-900">SpO2 Trend</h3>
-                                        <span class="text-sm text-gray-500">Today</span>
                                     </div>
                                     <canvas id="physician-spo2-chart" height="160"></canvas>
                                     <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">

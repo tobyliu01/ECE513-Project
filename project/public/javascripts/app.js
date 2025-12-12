@@ -19,6 +19,8 @@ const loadPhysicians = async () => {
   return physicianDirectory;
 };
 
+const getCurrentAssignment = () => currentUser?.physician || null;
+
 // Persists the latest JWT token state so API calls stay authenticated.
 const setAuthToken = (token) => {
   authToken = token;

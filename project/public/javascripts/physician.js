@@ -8,6 +8,7 @@ let physicianPatients = [];
 let selectedPatientId = null;
 let hrChartInstance = null;
 let spo2ChartInstance = null;
+let selectedDailyDate = new Date(Date.now() - 7 * 60 * 60 * 1000);
 
 const mapPhysician = (raw) => ({
   id: raw.id || raw._id,
@@ -137,6 +138,7 @@ const summaryMin = document.getElementById("patient-summary-min");
 const summaryMax = document.getElementById("patient-summary-max");
 const frequencyForm = document.getElementById("physician-frequency-form");
 const frequencySelect = document.getElementById("physician-frequency-select");
+const dailyDatePicker = document.getElementById("physician-daily-date-picker");
 const dailyEmptyState = document.getElementById("patient-daily-empty");
 const dailyContent = document.getElementById("patient-daily-content");
 const hrMinText = document.getElementById("physician-hr-min");
@@ -145,12 +147,7 @@ const spo2MinText = document.getElementById("physician-spo2-min");
 const spo2MaxText = document.getElementById("physician-spo2-max");
 const hrChartCanvas = document.getElementById("physician-hr-chart");
 const spo2ChartCanvas = document.getElementById("physician-spo2-chart");
-
-const fallbackDailyData = {
-  labels: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"],
-  hr: [68, 72, 75, 78, 74, 70],
-  spo2: [98, 99, 99, 98, 97, 98],
-};
+const defaultDailyEmptyMessage = dailyEmptyState?.textContent || "";
 
 // Generates a pseudo-unique identifier for a new physician account.
 const generatePhysicianId = () =>
@@ -240,6 +237,14 @@ const switchAuthTab = (tab) => {
   clearRegisterMessages();
 };
 
+// Returns a YYYY-MM-DD string in local time for date inputs.
+const formatLocalDateInputValue = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // Formats a BPM value for display, handling missing data.
 const formatBpm = (value) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "-- bpm";
@@ -251,6 +256,13 @@ const formatFrequency = (value) => {
   if (!value) return "User default";
   return `${value} min`;
 };
+
+const createPointStyles = (data, minVal, maxVal) =>
+  data.map((val) => {
+    if (val === minVal) return "rgb(59, 130, 246)";
+    if (val === maxVal) return "rgb(239, 68, 68)";
+    return "rgba(239, 68, 68, 0.5)";
+  });
 
 const getPersistedSelection = () =>
   localStorage.getItem(SELECTED_PATIENT_KEY) || null;
@@ -283,6 +295,9 @@ const getSelectedPatientRecord = () =>
   physicianPatients.find((p) => p.patientId === selectedPatientId) || null;
 
 selectedPatientId = getPersistedSelection();
+if (dailyDatePicker) {
+  dailyDatePicker.value = formatLocalDateInputValue(selectedDailyDate);
+}
 
 // Handles view switching in the physician portal sidebar.
 const setPortalView = (viewId) => {
@@ -428,9 +443,15 @@ const destroyCharts = () => {
   spo2ChartInstance = null;
 };
 
-const loadDailyMetrics = async (patientId, date = new Date()) => {
+const loadDailyMetrics = async (
+  patientId,
+  dateInput = selectedDailyDate
+) => {
   if (!patientId) return;
-  const isoDate = date.toISOString().split("T")[0];
+  const isoDate =
+    typeof dateInput === "string"
+      ? dateInput
+      : formatLocalDateInputValue(dateInput);
 
   try {
     const res = await apiRequest(
@@ -439,6 +460,11 @@ const loadDailyMetrics = async (patientId, date = new Date()) => {
     const patient = physicianPatients.find((p) => p.patientId === patientId);
     if (patient) {
       patient.dailyMetrics = res.data || { labels: [], hr: [], spo2: [] };
+      patient.dailyMetricsDate = isoDate;
+    }
+    selectedDailyDate = new Date(`${isoDate}T00:00:00`);
+    if (dailyDatePicker && dailyDatePicker.value !== isoDate) {
+      dailyDatePicker.value = isoDate;
     }
   } catch (err) {
     console.error("Failed to load daily metrics:", err);
@@ -461,21 +487,22 @@ const renderPatientDaily = () => {
   const patient = getSelectedPatientRecord();
 
   if (!patient) {
+    if (dailyEmptyState) {
+      dailyEmptyState.textContent = defaultDailyEmptyMessage;
+    }
     dailyContent.classList.add("hidden");
     dailyEmptyState.classList.remove("hidden");
     destroyCharts();
     return;
   }
 
+  const metrics = patient.dailyMetrics || { labels: [], hr: [], spo2: [] };
+  const labels = metrics.labels || [];
+  const hrData = metrics.hr || [];
+  const spo2Data = metrics.spo2 || [];
+  dailyEmptyState.textContent = defaultDailyEmptyMessage;
   dailyContent.classList.remove("hidden");
   dailyEmptyState.classList.add("hidden");
-
-  const metrics = patient.dailyMetrics || fallbackDailyData;
-  const labels = metrics.labels?.length
-    ? metrics.labels
-    : fallbackDailyData.labels;
-  const hrData = metrics.hr?.length ? metrics.hr : fallbackDailyData.hr;
-  const spo2Data = metrics.spo2?.length ? metrics.spo2 : fallbackDailyData.spo2;
 
   const hrMin = hrData.length ? Math.min(...hrData) : 0;
   const hrMax = hrData.length ? Math.max(...hrData) : 0;
@@ -505,6 +532,9 @@ const renderPatientDaily = () => {
             backgroundColor: "rgba(239, 68, 68, 0.1)",
             fill: true,
             tension: 0.3,
+            pointBackgroundColor: createPointStyles(hrData, hrMin, hrMax),
+            pointRadius: 5,
+            pointHoverRadius: 7,
           },
         ],
       },
@@ -525,11 +555,36 @@ const renderPatientDaily = () => {
             backgroundColor: "rgba(59, 130, 246, 0.1)",
             fill: true,
             tension: 0.3,
+            pointBackgroundColor: createPointStyles(spo2Data, spo2Min, spo2Max),
+            pointRadius: 5,
+            pointHoverRadius: 7,
           },
         ],
       },
       options: { responsive: true, scales: { y: { beginAtZero: false } } },
     });
+  }
+};
+
+const handleDailyDateChange = async (event) => {
+  const newDate = event.target.value;
+  if (!newDate) {
+    event.target.value = formatLocalDateInputValue(selectedDailyDate);
+    return;
+  }
+
+  // Allow choosing a date even before a patient is selected.
+  if (!selectedPatientId) {
+    selectedDailyDate = new Date(`${newDate}T00:00:00`);
+    return;
+  }
+
+  try {
+    await loadDailyMetrics(selectedPatientId, newDate);
+    renderPatientDaily();
+  } catch (err) {
+    alert(err.message || "Failed to load measurements for selected date.");
+    event.target.value = formatLocalDateInputValue(selectedDailyDate);
   }
 };
 
@@ -650,7 +705,7 @@ patientRows?.addEventListener("click", async (event) => {
   persistSelectedPatient();
 
   try {
-    await loadDailyMetrics(patientId);
+    await loadDailyMetrics(patientId, selectedDailyDate);
   } catch (err) {
     console.warn("Failed to load daily metrics:", err.message);
   }
@@ -675,6 +730,9 @@ registerForm?.addEventListener("submit", handlePhysicianRegister);
 logoutButton?.addEventListener("click", handlePhysicianLogout);
 loginTabButton?.addEventListener("click", () => switchAuthTab("login"));
 registerTabButton?.addEventListener("click", () => switchAuthTab("register"));
+if (dailyDatePicker) {
+  dailyDatePicker.addEventListener("change", handleDailyDateChange);
+}
 
 const wantsRegister = window.location.hash === "#register";
 switchAuthTab(wantsRegister ? "register" : "login");
