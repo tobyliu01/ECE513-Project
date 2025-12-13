@@ -6,7 +6,7 @@ CLONE THIS REPO AS THE ROOT FOLDER OF THE PROJECT.
 
 Make sure you installed nvm and express.
 
-## Setup
+## Setup & Launch
 
 Enter this folder.
 
@@ -49,6 +49,14 @@ The password should
 1. be at least 8-digit long, and
 2. contains at least 1 lowercase letter, 1 uppercase letter, and 1 digit
 
-## Demo Video
+## User Credential
 
-The video is included in this repo: `demo.mp4`.
+Username: `321@321.com`
+
+Password: `1234qweR`
+
+## Physician Credential
+
+Username: `d1571502273@123.com`
+
+Password: `Ddd123456`
