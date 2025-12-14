@@ -126,25 +126,6 @@ const bootstrapApp = async (seedUser) => {
   initializeApp();
 };
 
-// ------------------------- MOCK CHART DATA -------------------------
-const mockDailyData = {
-  labels: [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-  ],
-  hr: [72, 75, 74, 65, 68, 70, 88, 92, 85],
-  spo2: [98, 99, 98, 97, 96, 97, 98, 99, 98],
-};
-const mockWeeklyData = { avg: 76, min: 65, max: 92 };
-// -------------------------------------------------------------------
-
 // Chart variables
 let hrChartInstance = null;
 let spo2ChartInstance = null;
